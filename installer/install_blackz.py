@@ -11,6 +11,36 @@ import zipfile
 import subprocess
 from pathlib import Path
 
+def find_executable():
+    """Find BlackzAllocator.exe in various possible locations"""
+    # Get current working directory
+    current_dir = Path.cwd()
+    
+    # Possible locations for the executable
+    possible_locations = [
+        current_dir / "BlackzAllocator.exe",  # Same directory as installer
+        current_dir.parent / "BlackzAllocator.exe",  # Parent directory
+        current_dir / ".." / "BlackzAllocator.exe",  # Parent via relative path
+        Path("BlackzAllocator.exe"),  # Relative to current directory
+        Path("../BlackzAllocator.exe"),  # One level up
+    ]
+    
+    # Also check if we're in a sub-installer directory
+    if current_dir.name == "installer":
+        possible_locations.extend([
+            current_dir.parent / "BlackzAllocator.exe",
+            current_dir / ".." / "BlackzAllocator.exe",
+        ])
+    
+    for location in possible_locations:
+        try:
+            if location.exists() and location.is_file():
+                return location.resolve()
+        except:
+            continue
+    
+    return None
+
 def main():
     print("=" * 60)
     print("    BlackzAllocator Installer")
@@ -18,9 +48,13 @@ def main():
     print("=" * 60)
     print()
     
-    # Get the directory where this installer script is located
-    installer_dir = Path(__file__).parent.absolute()
-    package_dir = installer_dir.parent  # Go up one level to the package directory
+    # Debug information
+    current_dir = Path.cwd()
+    script_dir = Path(__file__).parent.absolute()
+    
+    print(f"Current directory: {current_dir}")
+    print(f"Script directory: {script_dir}")
+    print()
     
     # Default installation directory
     if os.name == 'nt':  # Windows
@@ -45,21 +79,27 @@ def main():
         # Create installation directory
         install_path.mkdir(parents=True, exist_ok=True)
         
-        # Look for executable in the package directory
-        exe_source = package_dir / "BlackzAllocator.exe"
-        if not exe_source.exists():
-            # Also try in the current directory
-            exe_source = Path("BlackzAllocator.exe")
+        # Find the executable
+        exe_source = find_executable()
         
-        if exe_source.exists():
+        if exe_source and exe_source.exists():
+            print(f"✅ Found BlackzAllocator.exe at: {exe_source}")
             exe_dest = install_path / "BlackzAllocator.exe"
             shutil.copy2(exe_source, exe_dest)
             print("✅ Copied BlackzAllocator.exe")
         else:
             print("❌ BlackzAllocator.exe not found!")
-            print(f"   Looked in: {package_dir}")
-            print(f"   Also tried: {Path('.').absolute()}")
-            input("Press Enter to exit...")
+            print(f"   Current directory: {current_dir}")
+            print(f"   Script directory: {script_dir}")
+            print("   Searched in:")
+            for i, location in enumerate([
+                current_dir / "BlackzAllocator.exe",
+                current_dir.parent / "BlackzAllocator.exe",
+                Path("BlackzAllocator.exe"),
+                Path("../BlackzAllocator.exe"),
+            ]):
+                print(f"     {i+1}. {location.absolute()}")
+            input("\nPress Enter to exit...")
             return
         
         # Create desktop shortcut (Windows)
@@ -228,9 +268,8 @@ Enjoy using BlackzAllocator!
         
     except Exception as e:
         print(f"❌ Installation failed: {e}")
-        print(f"Current directory: {Path('.').absolute()}")
-        print(f"Installer directory: {installer_dir}")
-        print(f"Package directory: {package_dir}")
+        import traceback
+        traceback.print_exc()
         input("Press Enter to exit...")
         return
     

@@ -32,12 +32,46 @@ def create_package():
         print("❌ BlackzAllocator.exe not found. Please build first!")
         return
     
-    # Copy installer
+    # Copy simple installer (main installer)
+    shutil.copy2("simple_install.py", package_dir / "install.py")
+    print("✅ Copied simple installer as install.py")
+    
+    # Copy complex installer as backup
     installer_dir = package_dir / "installer"
     installer_dir.mkdir(exist_ok=True)
     shutil.copy2("installer/install_blackz.py", installer_dir / "install_blackz.py")
     shutil.copy2("installer/install.bat", package_dir / "install.bat")
-    print("✅ Copied installer files")
+    print("✅ Copied complex installer files")
+    
+    # Create a simple batch file for the simple installer
+    simple_batch = package_dir / "INSTALL.bat"
+    with open(simple_batch, 'w') as f:
+        f.write('''@echo off
+title BlackzAllocator Simple Installer
+color 0B
+
+echo.
+echo ===============================================
+echo    BlackzAllocator Simple Installer
+echo    Professional IP Pool Management System
+echo ===============================================
+echo.
+
+REM Check if Python is available
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [ERROR] Python is not installed or not in PATH
+    echo [INFO] Please install Python from https://python.org
+    pause
+    exit /b 1
+)
+
+echo [INFO] Starting simple installation...
+python install.py
+
+pause
+''')
+    print("✅ Created INSTALL.bat for simple installer")
     
     # Create package README
     readme_content = f"""BlackzAllocator v{version} - Professional IP Pool Management
@@ -46,26 +80,32 @@ def create_package():
 🚀 What's Included:
 ------------------
 • BlackzAllocator.exe - Main application (standalone executable)
-• install.bat - Easy Windows installer
-• installer/ - Installation scripts
+• INSTALL.bat - Simple installer (RECOMMENDED)
+• install.bat - Advanced installer (backup)
+• install.py - Simple Python installer
+• installer/ - Advanced installation scripts
 
-🔧 Installation:
----------------
-METHOD 1 (Recommended): 
-   1. Double-click "install.bat"
-   2. Follow the installation wizard
-   3. Launch from desktop shortcut or Start Menu
+🔧 Installation Options:
+------------------------
+METHOD 1 (RECOMMENDED - Simple): 
+   1. Double-click "INSTALL.bat"
+   2. Follow the simple installation wizard
+   3. Launch from desktop shortcut
 
-METHOD 2 (Manual):
+METHOD 2 (Advanced):
+   1. Double-click "install.bat" 
+   2. Follow the advanced installation wizard
+
+METHOD 3 (Manual):
    1. Copy BlackzAllocator.exe to desired location
-   2. Run BlackzAllocator.exe
+   2. Run BlackzAllocator.exe directly
 
 💻 System Requirements:
 ----------------------
 • Windows 10/11 (64-bit)
 • 512 MB RAM minimum
 • 100 MB disk space
-• Network access for IP management
+• Python (for installer only - not needed to run the app)
 
 ✨ Features:
 -----------
@@ -83,11 +123,11 @@ METHOD 2 (Manual):
 
 🎯 Quick Start:
 --------------
-1. Install using install.bat
+1. Use INSTALL.bat for easiest installation
 2. Launch BlackzAllocator
 3. Click "Create Pool" to create your first IP pool
-4. Use the Allocations tab to manage IP assignments
-5. Monitor usage in the Monitoring tab
+4. Use the interface to manage IP assignments
+5. Monitor usage in real-time
 
 🛠️ Network Management:
 ----------------------
@@ -125,15 +165,23 @@ Platform: Windows
 Components:
 -----------
 • Main Application: BlackzAllocator.exe
-• Database Engine: SQLite
+• Simple Installer: INSTALL.bat + install.py
+• Advanced Installer: install.bat + installer/install_blackz.py
+• Database Engine: SQLite (embedded)
 • GUI Framework: CustomTkinter
 • API Framework: FastAPI
 • Network Library: psutil
 
+Installation Options:
+--------------------
+1. INSTALL.bat - Simple, reliable installer (recommended)
+2. install.bat - Advanced installer with more features
+3. Manual - Just run BlackzAllocator.exe directly
+
 Dependencies Included:
 ---------------------
 All required dependencies are bundled in the executable.
-No additional installation required.
+No additional installation required to run the application.
 
 Installation Size: ~150 MB
 Runtime Memory: ~50-100 MB
@@ -171,8 +219,14 @@ Runtime Memory: ~50-100 MB
 =========================
 Your friend can now:
 1. Download and extract {zip_path}
-2. Run install.bat for automatic installation
-3. Or manually run BlackzAllocator.exe
+2. Run INSTALL.bat for simple installation (RECOMMENDED)
+3. Run install.bat for advanced installation
+4. Or manually run BlackzAllocator.exe directly
+
+🎯 Installation Options:
+- INSTALL.bat: Simple, foolproof installer
+- install.bat: Advanced installer with more features
+- Manual: No installation needed
 """)
 
 if __name__ == "__main__":
