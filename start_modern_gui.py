@@ -1,94 +1,42 @@
 #!/usr/bin/env python3
 """
-Modern BlackzAllocator GUI Starter
-Uses customtkinter for modern rounded corners and sleek design
+Modern ForceBindIP GUI Launcher
+Professional Network Interface Binding Application
 """
 
 import sys
 import os
-import customtkinter as ctk
-from tkinter import messagebox
-import requests
-import time
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-def check_api_connection():
-    """Check if API server is accessible"""
-    try:
-        response = requests.get("http://localhost:8000/health", timeout=2)
-        return response.status_code == 200
-    except:
-        return False
-
 def main():
-    """Start modern GUI directly"""
-    print("🚀 Starting Modern BlackzAllocator GUI...")
+    """Launch the modern ForceBindIP GUI"""
+    print("🌐 Starting ForceBindIP Launcher...")
     
     try:
-        # Initialize database
-        from database import init_database
-        init_database()
-        print("✅ Database initialized")
+        from gui.modern_window import ModernForceBindIPGUI
         
-        # Import and start modern GUI
-        from gui.modern_window import ModernBlackzAllocatorGUI
+        # Create and run the modern GUI
+        app = ModernForceBindIPGUI()
         
-        print("🎨 Creating modern GUI window...")
-        app = ModernBlackzAllocatorGUI()
+        # Initialize with data refresh
+        app.refresh_all_data()
+        app.refresh_quick_launch()
         
-        # Check API connection and update status
-        def update_connection_status():
-            if check_api_connection():
-                app.status_label.configure(text="Connected")
-                app.status_dot.configure(text_color="#40ff40")
-                print("✓ Connected to API server")
-            else:
-                app.status_label.configure(text="API Disconnected")
-                app.status_dot.configure(text_color="#ff6b6b")
-                print("⚠ API server not detected - start with: python api_server.py")
+        print("✅ ForceBindIP GUI initialized successfully")
         
-        # Initial status check
-        app.root.after(1000, update_connection_status)
+        # Run the application
+        app.root.mainloop()
         
-        # Check connection status every 5 seconds
-        def periodic_check():
-            update_connection_status()
-            app.root.after(5000, periodic_check)
-        
-        app.root.after(2000, periodic_check)  # Start checking after 2 seconds
-        
-        print("✨ Modern GUI window is now ready!")
-        print("📱 Features: Rounded corners, smooth animations, modern design")
-        
-        # Start GUI loop
-        app.run()
-        
+    except KeyboardInterrupt:
+        print("\n🛑 Application interrupted by user")
+        sys.exit(0)
     except Exception as e:
-        print(f"❌ Error: {e}")
-        # Create a simple error dialog using customtkinter
-        ctk.set_appearance_mode("dark")
-        error_window = ctk.CTk()
-        error_window.title("Error")
-        error_window.geometry("400x200")
-        
-        error_label = ctk.CTkLabel(
-            error_window, 
-            text=f"Failed to start GUI:\n{str(e)}", 
-            font=ctk.CTkFont(size=14)
-        )
-        error_label.pack(pady=20)
-        
-        close_button = ctk.CTkButton(
-            error_window, 
-            text="Close", 
-            command=error_window.destroy,
-            corner_radius=10
-        )
-        close_button.pack(pady=10)
-        
-        error_window.mainloop()
+        print(f"❌ Error starting ForceBindIP GUI: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main() 

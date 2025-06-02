@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Create BlackzAllocator Distribution Package
+Create ForceBindIP GUI Distribution Package
 """
 
 import os
@@ -10,12 +10,12 @@ from pathlib import Path
 import datetime
 
 def create_package():
-    """Create a distribution package for BlackzAllocator"""
-    print("🎁 Creating BlackzAllocator Distribution Package...")
+    """Create a distribution package for ForceBindIP GUI"""
+    print("🎁 Creating ForceBindIP GUI Distribution Package...")
     
     # Package info
-    version = "1.0.1"  # Updated version with installer fixes
-    package_name = f"BlackzAllocator_v{version}_{datetime.datetime.now().strftime('%Y%m%d')}"
+    version = "2.0.0"  # New version for ForceBindIP GUI
+    package_name = f"ForceBindIP_GUI_v{version}_{datetime.datetime.now().strftime('%Y%m%d')}"
     
     # Create package directory
     package_dir = Path("package") / package_name
@@ -24,235 +24,292 @@ def create_package():
     print(f"📦 Package directory: {package_dir}")
     
     # Copy executable
-    exe_source = Path("dist/BlackzAllocator.exe")
+    exe_source = Path("dist/ForceBindIP_Launcher.exe")
     if exe_source.exists():
-        shutil.copy2(exe_source, package_dir / "BlackzAllocator.exe")
-        print("✅ Copied BlackzAllocator.exe")
+        shutil.copy2(exe_source, package_dir / "ForceBindIP_Launcher.exe")
+        print(f"✅ Copied executable: {exe_source.stat().st_size / 1024 / 1024:.1f} MB")
     else:
-        print("❌ BlackzAllocator.exe not found. Please build first!")
+        print("❌ Executable not found! Run PyInstaller first.")
         return
     
-    # Copy super simple installer (main installer)
-    shutil.copy2("INSTALL_SIMPLE.bat", package_dir / "INSTALL_SIMPLE.bat")
-    print("✅ Copied super simple batch installer")
+    # Copy icon
+    icon_source = Path("blackz_icon.ico")
+    if icon_source.exists():
+        shutil.copy2(icon_source, package_dir / "forcebindip_icon.ico")
+        print("✅ Copied icon file")
     
-    # Copy simple installer (Python version)
-    shutil.copy2("simple_install.py", package_dir / "install.py")
-    print("✅ Copied simple Python installer")
-    
-    # Copy complex installer as backup
-    installer_dir = package_dir / "installer"
-    installer_dir.mkdir(exist_ok=True)
-    shutil.copy2("installer/install_blackz.py", installer_dir / "install_blackz.py")
-    shutil.copy2("installer/install.bat", package_dir / "install.bat")
-    print("✅ Copied complex installer files")
-    
-    # Create a simple batch file for the Python installer
-    simple_batch = package_dir / "INSTALL.bat"
-    with open(simple_batch, 'w') as f:
-        f.write('''@echo off
-title BlackzAllocator Python Installer
-color 0B
+    # Create README file
+    readme_content = """# ForceBindIP GUI Launcher v2.0.0
 
-echo.
-echo ===============================================
-echo    BlackzAllocator Python Installer
-echo    Professional IP Pool Management System
-echo ===============================================
-echo.
+## 🌐 Professional Network Interface Binding Application
 
-REM Check if Python is available
-python --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo [ERROR] Python is not installed or not in PATH
-    echo [INFO] Please install Python from https://python.org
-    echo [INFO] OR use INSTALL_SIMPLE.bat instead (no Python required)
-    pause
-    exit /b 1
-)
+A modern, user-friendly GUI for ForceBindIP that allows you to bind applications to specific network interfaces.
 
-echo [INFO] Starting Python installation...
-python install.py
+### 📋 Features
 
-pause
-''')
-    print("✅ Created INSTALL.bat for Python installer")
-    
-    # Create package README
-    readme_content = f"""BlackzAllocator v{version} - Professional IP Pool Management
-================================================================
+• **Modern Dark Theme**: Beautiful CustomTkinter interface with rounded corners
+• **Auto Interface Detection**: Automatically detects and lists all network interfaces
+• **Application Browser**: Easy file browser to select applications to launch
+• **Configuration Management**: Save and load application configurations
+• **Quick Launch**: Fast access to frequently used applications
+• **x86/x64 Support**: Supports both 32-bit and 64-bit ForceBindIP versions
+• **Command Arguments**: Support for command line arguments
+• **Delayed Injection**: Optional delayed injection mode
+• **Interface Testing**: Test network interface connectivity
 
-🚀 What's Included:
-------------------
-• BlackzAllocator.exe - Main application (standalone executable)
-• INSTALL_SIMPLE.bat - Super simple installer (NO PYTHON NEEDED) ⭐ RECOMMENDED
-• INSTALL.bat - Python installer (requires Python)
-• install.py - Python installer script
-• install.bat - Advanced installer (backup)
-• installer/ - Advanced installation scripts
+### 🚀 Quick Start
 
-🔧 Installation Options:
-------------------------
-METHOD 1 (SUPER SIMPLE - RECOMMENDED): 
-   1. Double-click "INSTALL_SIMPLE.bat"
-   2. No Python required!
-   3. Automatically finds BlackzAllocator.exe
-   4. Creates desktop shortcut
+1. **Download ForceBindIP** (Required):
+   - Visit: https://r1ch.net/projects/forcebindip
+   - Download and extract ForceBindIP.exe or ForceBindIP64.exe
 
-METHOD 2 (Python installer):
-   1. Double-click "INSTALL.bat" 
-   2. Requires Python installed
-   3. More robust searching
+2. **Run the Application**:
+   - Double-click `ForceBindIP_Launcher.exe`
 
-METHOD 3 (Advanced):
-   1. Double-click "install.bat"
-   2. Advanced features
+3. **Configure ForceBindIP Path**:
+   - Go to Settings tab
+   - Browse for your ForceBindIP.exe location
+   - Test the path to verify it works
 
-METHOD 4 (Manual):
-   1. Copy BlackzAllocator.exe to desired location
-   2. Run BlackzAllocator.exe directly
+4. **Launch Applications**:
+   - Go to Launcher tab
+   - Browse for application to launch
+   - Select network interface
+   - Click "Launch App"
 
-💻 System Requirements:
-----------------------
-• Windows 10/11 (64-bit)
-• 512 MB RAM minimum
-• 100 MB disk space
-• NO additional software required to run the app!
-• Python only needed for INSTALL.bat (not for INSTALL_SIMPLE.bat)
+### 💾 Configuration Management
 
-✨ Features:
------------
-• Modern GUI with rounded corners and dark theme
-• Create and manage IP pools (CIDR networks)
-• Dynamic IP allocation with multiple strategies:
-  - First-fit allocation
-  - Random allocation
-  - Sequential allocation
-  - Load-balanced allocation
-• Reserve specific IP addresses
-• Network interface binding and testing
-• Real-time monitoring and statistics
-• Professional interface inspired by macOS/Flutter
+Save frequently used applications as configurations:
+- Select app and interface in Launcher tab
+- Click "Save Config"
+- Access saved configs in Configurations tab
+- Use Quick Launch for instant access
 
-🎯 Quick Start:
---------------
-1. Use INSTALL_SIMPLE.bat for easiest installation (no Python needed!)
-2. Launch BlackzAllocator
-3. Click "Create Pool" to create your first IP pool
-4. Use the interface to manage IP assignments
-5. Monitor usage in real-time
+### 🌐 Network Interface Binding
 
-🛠️ Network Management:
-----------------------
-• Pool Management: Create, edit, delete IP pools
-• IP Allocation: Dynamic and static IP assignment
-• Interface Binding: Bind IPs to network interfaces
-• Utilization Tracking: Monitor pool usage in real-time
-• Lease Management: Handle IP lease durations and renewals
+The application binds your chosen programs to specific network interfaces:
+- Useful for VPN routing
+- Force apps through specific connections
+- Bypass network restrictions
+- Testing with different interfaces
 
-📞 Support:
-----------
-For technical support or questions, refer to the application's help system
-or check the project documentation at: https://github.com/Blacknapoleon99/ipallo
+### ⚙️ Requirements
 
-🎉 Thank you for choosing BlackzAllocator!
+- Windows 10/11
+- ForceBindIP (download separately)
+- Network interfaces configured on your system
 
-Version: {version}
-Build Date: {datetime.datetime.now().strftime('%Y-%m-%d')}
+### 🔧 Troubleshooting
+
+**"ForceBindIP not found" error**:
+- Download ForceBindIP from official source
+- Set correct path in Settings tab
+- Ensure executable permissions
+
+**"Interface not found" error**:
+- Check network adapter status
+- Refresh interfaces in Interfaces tab
+- Verify interface has valid IP address
+
+**Application fails to launch**:
+- Check if application path is correct
+- Verify ForceBindIP version matches target app (x86/x64)
+- Try delayed injection mode
+- Check application permissions
+
+### 📝 Version History
+
+**v2.0.0** - Complete ForceBindIP GUI Implementation
+- Modern CustomTkinter interface
+- Auto network interface detection
+- Configuration management system
+- Quick launch functionality
+- Interface testing and validation
+- x86/x64 ForceBindIP support
+
+### 📄 License
+
+This application is provided as-is. ForceBindIP is created by Richard Stanway.
+
+### 🌐 Links
+
+- ForceBindIP Official: https://r1ch.net/projects/forcebindip
+- GitHub Repository: https://github.com/Blacknapoleon99/ipallo
+
+---
+Created with ❤️ for the networking community
 """
     
     with open(package_dir / "README.txt", 'w', encoding='utf-8') as f:
         f.write(readme_content)
     print("✅ Created README.txt")
     
-    # Create version info
-    version_info = f"""BlackzAllocator Version Information
-===================================
+    # Create simple installer batch file
+    installer_content = """@echo off
+title ForceBindIP GUI Installer
+color 0B
 
-Version: {version}
+echo.
+echo ===============================================
+echo    ForceBindIP GUI Simple Installer
+echo    Professional Network Interface Binding
+echo ===============================================
+echo.
+
+REM Change to the directory where this batch file is located
+cd /d "%~dp0"
+
+echo [INFO] Installing ForceBindIP GUI Launcher...
+echo [DEBUG] Current directory: %CD%
+
+REM Create installation directory
+set "INSTALL_DIR=%USERPROFILE%\\AppData\\Local\\ForceBindIP_GUI"
+echo [INFO] Installation directory: %INSTALL_DIR%
+
+if not exist "%INSTALL_DIR%" (
+    mkdir "%INSTALL_DIR%"
+    echo [OK] Created installation directory
+)
+
+REM Copy files
+if exist "ForceBindIP_Launcher.exe" (
+    copy "ForceBindIP_Launcher.exe" "%INSTALL_DIR%\\" >nul
+    echo [OK] Copied ForceBindIP_Launcher.exe
+) else (
+    echo [ERROR] ForceBindIP_Launcher.exe not found!
+    pause
+    exit /b 1
+)
+
+if exist "forcebindip_icon.ico" (
+    copy "forcebindip_icon.ico" "%INSTALL_DIR%\\" >nul
+    echo [OK] Copied application icon
+)
+
+if exist "README.txt" (
+    copy "README.txt" "%INSTALL_DIR%\\" >nul
+    echo [OK] Copied README file
+)
+
+REM Create desktop shortcut
+set "DESKTOP=%USERPROFILE%\\Desktop"
+echo [INFO] Creating desktop shortcut...
+
+echo [Desktop Entry] > "%DESKTOP%\\ForceBindIP GUI.url"
+echo URL=file:///%INSTALL_DIR%\\ForceBindIP_Launcher.exe >> "%DESKTOP%\\ForceBindIP GUI.url"
+echo IconFile=%INSTALL_DIR%\\forcebindip_icon.ico >> "%DESKTOP%\\ForceBindIP GUI.url"
+
+REM Alternative shortcut creation using PowerShell
+powershell -Command "^
+$WshShell = New-Object -comObject WScript.Shell; ^
+$Shortcut = $WshShell.CreateShortcut('%DESKTOP%\\ForceBindIP GUI.lnk'); ^
+$Shortcut.TargetPath = '%INSTALL_DIR%\\ForceBindIP_Launcher.exe'; ^
+$Shortcut.WorkingDirectory = '%INSTALL_DIR%'; ^
+$Shortcut.IconLocation = '%INSTALL_DIR%\\forcebindip_icon.ico'; ^
+$Shortcut.Description = 'ForceBindIP GUI Launcher'; ^
+$Shortcut.Save()" 2>nul
+
+if exist "%DESKTOP%\\ForceBindIP GUI.lnk" (
+    echo [OK] Desktop shortcut created
+) else (
+    echo [WARN] Could not create desktop shortcut
+)
+
+echo.
+echo ===============================================
+echo Installation completed successfully!
+echo.
+echo You can now:
+echo 1. Use the desktop shortcut: "ForceBindIP GUI"
+echo 2. Run directly from: %INSTALL_DIR%\\ForceBindIP_Launcher.exe
+echo.
+echo IMPORTANT: Download ForceBindIP from:
+echo https://r1ch.net/projects/forcebindip
+echo.
+echo Configure the ForceBindIP path in Settings tab
+echo ===============================================
+echo.
+
+REM Offer to launch the application
+set /p launch="Launch ForceBindIP GUI now? (Y/N): "
+if /i "%launch%"=="Y" (
+    echo [INFO] Launching ForceBindIP GUI...
+    start "" "%INSTALL_DIR%\\ForceBindIP_Launcher.exe"
+) else (
+    echo [INFO] You can launch it later from the desktop shortcut
+)
+
+echo.
+echo Press any key to exit...
+pause >nul
+"""
+    
+    with open(package_dir / "INSTALL.bat", 'w', encoding='utf-8') as f:
+        f.write(installer_content)
+    print("✅ Created INSTALL.bat")
+    
+    # Create VERSION file
+    version_content = f"""ForceBindIP GUI Launcher v{version}
 Build Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-Build Type: Release
+Application Type: Network Interface Binding GUI
+ForceBindIP Integration: Professional
+Platform: Windows 10/11
 Architecture: x64
-Platform: Windows
 
-Components:
------------
-• Main Application: BlackzAllocator.exe
-• Super Simple Installer: INSTALL_SIMPLE.bat (no Python needed)
-• Python Installer: INSTALL.bat + install.py
-• Advanced Installer: install.bat + installer/install_blackz.py
-• Database Engine: SQLite (embedded)
-• GUI Framework: CustomTkinter
-• API Framework: FastAPI
-• Network Library: psutil
+Features:
+- Modern CustomTkinter interface
+- Auto network interface detection  
+- Configuration management
+- Quick launch system
+- x86/x64 ForceBindIP support
+- Interface testing and validation
 
-Installation Options:
---------------------
-1. INSTALL_SIMPLE.bat - Super simple, no Python needed (RECOMMENDED)
-2. INSTALL.bat - Python installer with robust searching  
-3. install.bat - Advanced installer with more features
-4. Manual - Just run BlackzAllocator.exe directly
+Requirements:
+- Windows 10 or later
+- ForceBindIP (download separately)
+- Network adapters configured
 
-Dependencies Included:
----------------------
-All required dependencies are bundled in the executable.
-No additional installation required to run the application.
-
-Installation Size: ~150 MB
-Runtime Memory: ~50-100 MB
-
-Fixed in v{version}:
--------------------
-• Fixed installer path detection issues
-• Added super simple batch installer (no Python required)
-• Improved executable search algorithm
-• Better error messages and debugging
-• Multiple installation fallback options
+For latest updates visit:
+https://github.com/Blacknapoleon99/ipallo
 """
     
     with open(package_dir / "VERSION.txt", 'w', encoding='utf-8') as f:
-        f.write(version_info)
+        f.write(version_content)
     print("✅ Created VERSION.txt")
     
-    # Create ZIP package
-    zip_path = f"{package_name}.zip"
-    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, dirs, files in os.walk(package_dir):
-            for file in files:
-                file_path = Path(root) / file
-                arcname = file_path.relative_to(package_dir.parent)
-                zipf.write(file_path, arcname)
+    # Create the ZIP package
+    zip_path = Path(f"{package_name}.zip")
+    print(f"📦 Creating ZIP package: {zip_path}")
     
-    print(f"✅ Created ZIP package: {zip_path}")
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for file_path in package_dir.rglob('*'):
+            if file_path.is_file():
+                arc_name = file_path.relative_to(package_dir.parent)
+                zipf.write(file_path, arc_name)
+                print(f"   + {arc_name}")
     
     # Get file sizes
-    exe_size = exe_source.stat().st_size / 1024 / 1024
-    zip_size = Path(zip_path).stat().st_size / 1024 / 1024
+    exe_size = (package_dir / "ForceBindIP_Launcher.exe").stat().st_size / 1024 / 1024
+    zip_size = zip_path.stat().st_size / 1024 / 1024
     
-    print(f"""
-🎉 Package Creation Complete!
-============================
-📦 Package: {package_name}
-📁 Directory: {package_dir}
-🗜️  ZIP File: {zip_path}
-📏 Executable Size: {exe_size:.1f} MB
-📏 Package Size: {zip_size:.1f} MB
-
-🚀 Ready for Distribution!
-=========================
-Your friend can now:
-1. Download and extract {zip_path}
-2. Run INSTALL_SIMPLE.bat (RECOMMENDED - no Python needed!)
-3. Run INSTALL.bat (requires Python)
-4. Run install.bat (advanced installation)
-5. Or manually run BlackzAllocator.exe directly
-
-🎯 Installation Options:
-- INSTALL_SIMPLE.bat: Super simple, no dependencies
-- INSTALL.bat: Python installer with robust searching
-- install.bat: Advanced installer with more features
-- Manual: No installation needed
-""")
+    print(f"\n🎉 Package created successfully!")
+    print(f"📊 Package Statistics:")
+    print(f"   • Executable size: {exe_size:.1f} MB")
+    print(f"   • ZIP package size: {zip_size:.1f} MB")
+    print(f"   • Package location: {zip_path.absolute()}")
+    print(f"   • Version: v{version}")
+    
+    print(f"\n📋 Package Contents:")
+    print(f"   • ForceBindIP_Launcher.exe - Main application")
+    print(f"   • INSTALL.bat - Simple installer")
+    print(f"   • README.txt - User guide and instructions")
+    print(f"   • VERSION.txt - Version information")
+    print(f"   • forcebindip_icon.ico - Application icon")
+    
+    print(f"\n✅ Ready for distribution!")
+    print(f"🌐 Users can download and run INSTALL.bat to install")
+    
+    return zip_path
 
 if __name__ == "__main__":
     create_package() 

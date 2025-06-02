@@ -1,31 +1,40 @@
 import customtkinter as ctk
 import tkinter as tk
-from tkinter import messagebox
-import requests
+from tkinter import messagebox, filedialog
+import subprocess
+import psutil
 import json
+import os
 import threading
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
+import configparser
 
 # Set appearance mode and color theme
 ctk.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
-class ModernBlackzAllocatorGUI:
-    """Modern GUI application for BlackzAllocator with rounded corners and sleek design"""
+class ModernForceBindIPGUI:
+    """Modern GUI application for ForceBindIP with rounded corners and sleek design"""
     
     def __init__(self):
         # Create main window
         self.root = ctk.CTk()
-        self.root.title("BlackzAllocator")
+        self.root.title("ForceBindIP Launcher")
         self.root.geometry("1500x1000")
         self.root.minsize(1200, 800)
         
         # Configure window
         self.root.configure(fg_color=("#f0f0f0", "#1a1a1a"))
         
-        # API base URL
-        self.api_base = "http://localhost:8000"
+        # Application data
+        self.config_file = "forcebindip_config.json"
+        self.forcebindip_path = ""
+        self.network_interfaces = []
+        self.saved_configs = []
+        
+        # Load configuration
+        self.load_configuration()
         
         # Create modern interface
         self.create_modern_widgets()
@@ -57,7 +66,7 @@ class ModernBlackzAllocatorGUI:
         # Main title
         self.title_label = ctk.CTkLabel(
             self.title_frame,
-            text="BlackzAllocator",
+            text="🌐 ForceBindIP Launcher",
             font=ctk.CTkFont(family="SF Pro Display", size=28, weight="bold"),
             text_color=("#000000", "#ffffff")
         )
@@ -66,7 +75,7 @@ class ModernBlackzAllocatorGUI:
         # Subtitle
         self.subtitle_label = ctk.CTkLabel(
             self.title_frame,
-            text="Professional IP Pool Management",
+            text="Force Applications to Use Specific Network Interfaces",
             font=ctk.CTkFont(family="SF Pro Display", size=14),
             text_color=("#666666", "#999999")
         )
@@ -100,7 +109,7 @@ class ModernBlackzAllocatorGUI:
         
         self.status_label = ctk.CTkLabel(
             self.status_container,
-            text="Connected",
+            text="Ready",
             font=ctk.CTkFont(family="SF Pro Display", size=12, weight="bold"),
             text_color=("#28a745", "#40ff40")
         )
@@ -131,11 +140,11 @@ class ModernBlackzAllocatorGUI:
         self.tabview.pack(fill="both", expand=True, padx=20, pady=20)
         
         # Create modern tabs
-        self.create_modern_pools_tab()
-        self.create_modern_allocations_tab()
-        self.create_modern_leases_tab()
-        self.create_modern_interfaces_tab()
-        self.create_modern_monitoring_tab()
+        self.create_launcher_tab()
+        self.create_interfaces_tab()
+        self.create_configurations_tab()
+        self.create_settings_tab()
+        self.create_monitoring_tab()
     
     def create_modern_button(self, parent, text, command, style="primary", width=140, height=35):
         """Create a modern button with rounded corners"""
@@ -197,68 +206,20 @@ class ModernBlackzAllocatorGUI:
             scrollbar_button_color=("#6c757d", "#64748b"),
             scrollbar_button_hover_color=("#495057", "#475569")
         )
-    
-    def create_modern_pools_tab(self):
-        """Create modern IP Pools tab"""
-        self.tabview.add("🏊‍♂️ IP Pools")
-        pools_tab = self.tabview.tab("🏊‍♂️ IP Pools")
-        
-        # Modern toolbar
-        toolbar = self.create_modern_frame(pools_tab, transparent=True)
-        toolbar.pack(fill="x", pady=(0, 20))
-        
-        button_frame = self.create_modern_frame(toolbar)
-        button_frame.pack(fill="x", padx=0, pady=0)
-        
-        # Create buttons with modern styling
-        buttons_container = ctk.CTkFrame(button_frame, fg_color=("#ffffff", "#2d2d2d"))
-        buttons_container.pack(padx=20, pady=15)
-        
-        self.create_modern_button(buttons_container, "✨ Create Pool", self.create_pool_dialog, "primary").pack(side="left", padx=(0, 15))
-        self.create_modern_button(buttons_container, "✏️ Edit Pool", self.edit_pool, "secondary").pack(side="left", padx=(0, 15))
-        self.create_modern_button(buttons_container, "🗑️ Delete Pool", self.delete_pool, "danger").pack(side="left", padx=(0, 15))
-        self.create_modern_button(buttons_container, "🔄 Refresh", self.refresh_pools_button, "primary").pack(side="left")
-        
-        # Modern pools list with rounded corners
-        self.pools_frame = self.create_modern_scrollable_frame(pools_tab)
-        self.pools_frame.pack(fill="both", expand=True, pady=(0, 20))
-        
-        # Pool details section
-        details_frame = self.create_modern_frame(pools_tab)
-        details_frame.pack(fill="x", pady=0)
-        
-        details_title = ctk.CTkLabel(
-            details_frame,
-            text="📋 Pool Details",
-            font=ctk.CTkFont(family="SF Pro Display", size=16, weight="bold"),
-            text_color=("#495057", "#ffffff")
-        )
-        details_title.pack(anchor="w", padx=20, pady=(15, 10))
-        
-        self.pool_details_text = ctk.CTkTextbox(
-            details_frame,
-            height=120,
-            corner_radius=10,
-            border_width=1,
-            border_color=("#dee2e6", "#404040"),
-            fg_color=("#f8f9fa", "#1a1a1a"),
-            font=ctk.CTkFont(family="SF Mono", size=12)
-        )
-        self.pool_details_text.pack(fill="x", padx=20, pady=(0, 20))
-    
-    def create_modern_allocations_tab(self):
-        """Create modern IP Allocations tab with enhanced pool selection"""
-        self.tabview.add("💻 Allocations")
-        alloc_tab = self.tabview.tab("💻 Allocations")
+
+    def create_launcher_tab(self):
+        """Create application launcher tab"""
+        self.tabview.add("🚀 Launcher")
+        launcher_tab = self.tabview.tab("🚀 Launcher")
         
         # Modern control panel
-        control_frame = self.create_modern_frame(alloc_tab)
+        control_frame = self.create_modern_frame(launcher_tab)
         control_frame.pack(fill="x", pady=(0, 20))
         
         # Control panel title
         control_title = ctk.CTkLabel(
             control_frame,
-            text="⚙️ Allocation Controls",
+            text="🎮 Application Launcher",
             font=ctk.CTkFont(family="SF Pro Display", size=16, weight="bold"),
             text_color=("#495057", "#ffffff")
         )
@@ -268,38 +229,70 @@ class ModernBlackzAllocatorGUI:
         controls_container = ctk.CTkFrame(control_frame, fg_color=("#ffffff", "#2d2d2d"))
         controls_container.pack(fill="x", padx=20, pady=(0, 20))
         
-        # First row - Enhanced pool selection
-        row1 = ctk.CTkFrame(controls_container, fg_color=("#ffffff", "#2d2d2d"))
-        row1.pack(fill="x", pady=(0, 15))
+        # Application selection row
+        app_row = ctk.CTkFrame(controls_container, fg_color=("#ffffff", "#2d2d2d"))
+        app_row.pack(fill="x", pady=(15, 10))
         
-        # Enhanced pool selection with info
-        pool_info_frame = ctk.CTkFrame(row1, fg_color=("#ffffff", "#2d2d2d"))
-        pool_info_frame.pack(fill="x", pady=(0, 10))
-        
-        pool_label = ctk.CTkLabel(
-            pool_info_frame, 
-            text="🏊 Pool Selection:", 
+        app_label = ctk.CTkLabel(
+            app_row, 
+            text="📱 Application:", 
             font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold")
         )
-        pool_label.pack(side="left", padx=(0, 10))
+        app_label.pack(side="left", padx=(0, 10))
         
-        self.pool_var = tk.StringVar()
-        self.pool_combo = ctk.CTkComboBox(
-            pool_info_frame,
-            variable=self.pool_var,
-            width=400,  # Wider to show more info
+        self.app_path_var = tk.StringVar()
+        self.app_entry = ctk.CTkEntry(
+            app_row,
+            textvariable=self.app_path_var,
+            placeholder_text="Select an application to launch...",
+            width=400,
+            corner_radius=8,
+            border_width=1,
+            font=ctk.CTkFont(family="SF Pro Display", size=11)
+        )
+        self.app_entry.pack(side="left", padx=(0, 10))
+        
+        browse_btn = ctk.CTkButton(
+            app_row,
+            text="📁 Browse",
+            command=self.browse_application,
+            width=100,
+            height=32,
+            corner_radius=8,
+            font=ctk.CTkFont(size=12),
+            fg_color=("#17a2b8", "#20c997"),
+            hover_color=("#138496", "#1ab394")
+        )
+        browse_btn.pack(side="left", padx=(0, 10))
+        
+        # Network interface selection row
+        interface_row = ctk.CTkFrame(controls_container, fg_color=("#ffffff", "#2d2d2d"))
+        interface_row.pack(fill="x", pady=(0, 10))
+        
+        interface_label = ctk.CTkLabel(
+            interface_row, 
+            text="🌐 Network Interface:", 
+            font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold")
+        )
+        interface_label.pack(side="left", padx=(0, 10))
+        
+        self.interface_var = tk.StringVar()
+        self.interface_combo = ctk.CTkComboBox(
+            interface_row,
+            variable=self.interface_var,
+            width=350,
             corner_radius=8,
             border_width=1,
             font=ctk.CTkFont(family="SF Pro Display", size=11),
-            state="readonly"  # Prevent manual typing
+            state="readonly"
         )
-        self.pool_combo.pack(side="left", padx=(0, 20))
+        self.interface_combo.pack(side="left", padx=(0, 20))
         
-        # Refresh pools button
-        refresh_pools_btn = ctk.CTkButton(
-            pool_info_frame,
+        # Refresh interfaces button
+        refresh_interfaces_btn = ctk.CTkButton(
+            interface_row,
             text="🔄",
-            command=self.update_pool_combo,
+            command=self.refresh_network_interfaces,
             width=35,
             height=32,
             corner_radius=8,
@@ -307,90 +300,86 @@ class ModernBlackzAllocatorGUI:
             fg_color=("#17a2b8", "#20c997"),
             hover_color=("#138496", "#1ab394")
         )
-        refresh_pools_btn.pack(side="left", padx=(0, 20))
+        refresh_interfaces_btn.pack(side="left", padx=(0, 20))
         
-        # Strategy selection
-        strategy_info_frame = ctk.CTkFrame(row1, fg_color=("#ffffff", "#2d2d2d"))
-        strategy_info_frame.pack(fill="x")
+        # Arguments and options row
+        options_row = ctk.CTkFrame(controls_container, fg_color=("#ffffff", "#2d2d2d"))
+        options_row.pack(fill="x", pady=(0, 15))
         
-        strategy_label = ctk.CTkLabel(
-            strategy_info_frame, 
-            text="🎯 Strategy:", 
+        args_label = ctk.CTkLabel(
+            options_row, 
+            text="⚙️ Arguments:", 
             font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold")
         )
-        strategy_label.pack(side="left", padx=(0, 10))
+        args_label.pack(side="left", padx=(0, 10))
         
-        self.strategy_var = tk.StringVar(value="first_fit")
-        strategy_combo = ctk.CTkComboBox(
-            strategy_info_frame,
-            variable=self.strategy_var,
-            values=["first_fit", "random", "sequential", "load_balanced"],
+        self.args_var = tk.StringVar()
+        args_entry = ctk.CTkEntry(
+            options_row,
+            textvariable=self.args_var,
+            placeholder_text="Optional command line arguments",
             width=200,
             corner_radius=8,
             border_width=1,
-            font=ctk.CTkFont(family="SF Pro Display", size=12),
+            font=ctk.CTkFont(family="SF Pro Display", size=11)
+        )
+        args_entry.pack(side="left", padx=(0, 20))
+        
+        # Architecture selection
+        arch_label = ctk.CTkLabel(
+            options_row, 
+            text="🏗️ Architecture:", 
+            font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold")
+        )
+        arch_label.pack(side="left", padx=(0, 10))
+        
+        self.arch_var = tk.StringVar(value="x64")
+        arch_combo = ctk.CTkComboBox(
+            options_row,
+            variable=self.arch_var,
+            values=["x86", "x64"],
+            width=100,
+            corner_radius=8,
+            font=ctk.CTkFont(family="SF Pro Display", size=11),
             state="readonly"
         )
-        strategy_combo.pack(side="left", padx=(0, 30))
+        arch_combo.pack(side="left", padx=(0, 20))
         
-        # Client ID entry
-        client_label = ctk.CTkLabel(
-            strategy_info_frame, 
-            text="👤 Client ID:", 
-            font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold")
+        # Delayed injection checkbox
+        self.delayed_injection_var = tk.BooleanVar()
+        delayed_check = ctk.CTkCheckBox(
+            options_row,
+            text="Delayed Injection (-i)",
+            variable=self.delayed_injection_var,
+            font=ctk.CTkFont(family="SF Pro Display", size=11)
         )
-        client_label.pack(side="left", padx=(0, 10))
+        delayed_check.pack(side="left")
         
-        self.client_id_var = tk.StringVar()
-        client_entry = ctk.CTkEntry(
-            strategy_info_frame,
-            textvariable=self.client_id_var,
-            placeholder_text="Optional identifier",
-            width=200,
-            corner_radius=8,
-            border_width=1,
-            font=ctk.CTkFont(family="SF Pro Display", size=12)
+        # Action buttons row
+        actions_row = ctk.CTkFrame(controls_container, fg_color=("#ffffff", "#2d2d2d"))
+        actions_row.pack(fill="x", pady=(0, 15))
+        
+        self.create_modern_button(actions_row, "🚀 Launch App", self.launch_application, "success", 140).pack(side="left", padx=(0, 15))
+        self.create_modern_button(actions_row, "💾 Save Config", self.save_configuration_dialog, "primary", 140).pack(side="left", padx=(0, 15))
+        self.create_modern_button(actions_row, "🔄 Refresh All", self.refresh_all_data, "secondary", 120).pack(side="left")
+        
+        # Recent launches section
+        recent_frame = self.create_modern_frame(launcher_tab)
+        recent_frame.pack(fill="both", expand=True)
+        
+        recent_title = ctk.CTkLabel(
+            recent_frame,
+            text="📋 Quick Launch (Saved Configurations)",
+            font=ctk.CTkFont(family="SF Pro Display", size=16, weight="bold"),
+            text_color=("#495057", "#ffffff")
         )
-        client_entry.pack(side="left")
+        recent_title.pack(anchor="w", padx=20, pady=(15, 10))
         
-        # Second row - Action buttons
-        row2 = ctk.CTkFrame(controls_container, fg_color=("#ffffff", "#2d2d2d"))
-        row2.pack(fill="x")
-        
-        self.create_modern_button(row2, "🎯 Allocate Next IP", self.allocate_next_ip, "success", 160).pack(side="left", padx=(0, 15))
-        self.create_modern_button(row2, "📌 Reserve Specific IP", self.reserve_specific_ip_dialog, "primary", 180).pack(side="left", padx=(0, 15))
-        self.create_modern_button(row2, "❌ Deallocate", self.deallocate_ip, "danger", 140).pack(side="left", padx=(0, 15))
-        self.create_modern_button(row2, "🔄 Refresh", self.refresh_allocations, "secondary", 120).pack(side="left")
-        
-        # Modern allocations list
-        self.allocations_frame = self.create_modern_scrollable_frame(alloc_tab)
-        self.allocations_frame.pack(fill="both", expand=True)
-    
-    def create_modern_leases_tab(self):
-        """Create modern IP Leases tab"""
-        self.tabview.add("⏰ Leases")
-        leases_tab = self.tabview.tab("⏰ Leases")
-        
-        # Modern toolbar
-        toolbar = self.create_modern_frame(leases_tab, transparent=True)
-        toolbar.pack(fill="x", pady=(0, 20))
-        
-        button_frame = self.create_modern_frame(toolbar)
-        button_frame.pack(fill="x")
-        
-        buttons_container = ctk.CTkFrame(button_frame, fg_color=("#ffffff", "#2d2d2d"))
-        buttons_container.pack(padx=20, pady=15)
-        
-        self.create_modern_button(buttons_container, "🔄 Renew Lease", self.renew_lease_dialog, "success").pack(side="left", padx=(0, 15))
-        self.create_modern_button(buttons_container, "🧹 Cleanup Expired", self.cleanup_expired_leases, "warning").pack(side="left", padx=(0, 15))
-        self.create_modern_button(buttons_container, "🔄 Refresh", self.refresh_leases, "primary").pack(side="left")
-        
-        # Modern leases list
-        self.leases_frame = self.create_modern_scrollable_frame(leases_tab)
-        self.leases_frame.pack(fill="both", expand=True)
-    
-    def create_modern_interfaces_tab(self):
-        """Create modern Network Interfaces tab"""
+        self.quick_launch_frame = self.create_modern_scrollable_frame(recent_frame)
+        self.quick_launch_frame.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+
+    def create_interfaces_tab(self):
+        """Create network interfaces tab"""
         self.tabview.add("🌐 Interfaces")
         interfaces_tab = self.tabview.tab("🌐 Interfaces")
         
@@ -404,17 +393,121 @@ class ModernBlackzAllocatorGUI:
         buttons_container = ctk.CTkFrame(button_frame, fg_color=("#ffffff", "#2d2d2d"))
         buttons_container.pack(padx=20, pady=15)
         
-        self.create_modern_button(buttons_container, "🔗 Bind IP", self.bind_ip_dialog, "success").pack(side="left", padx=(0, 15))
-        self.create_modern_button(buttons_container, "🔓 Unbind IP", self.unbind_ip_dialog, "warning").pack(side="left", padx=(0, 15))
-        self.create_modern_button(buttons_container, "📡 Test Connectivity", self.test_connectivity_dialog, "primary").pack(side="left", padx=(0, 15))
-        self.create_modern_button(buttons_container, "🔄 Refresh", self.refresh_interfaces, "secondary").pack(side="left")
+        self.create_modern_button(buttons_container, "🔄 Refresh Interfaces", self.refresh_network_interfaces, "primary").pack(side="left", padx=(0, 15))
+        self.create_modern_button(buttons_container, "📊 Show Details", self.show_interface_details, "secondary").pack(side="left", padx=(0, 15))
+        self.create_modern_button(buttons_container, "🧪 Test Connection", self.test_interface_connection, "warning").pack(side="left")
         
         # Modern interfaces list
         self.interfaces_frame = self.create_modern_scrollable_frame(interfaces_tab)
         self.interfaces_frame.pack(fill="both", expand=True)
-    
-    def create_modern_monitoring_tab(self):
-        """Create modern Monitoring tab"""
+
+    def create_configurations_tab(self):
+        """Create saved configurations tab"""
+        self.tabview.add("💾 Configurations")
+        config_tab = self.tabview.tab("💾 Configurations")
+        
+        # Modern toolbar
+        toolbar = self.create_modern_frame(config_tab, transparent=True)
+        toolbar.pack(fill="x", pady=(0, 20))
+        
+        button_frame = self.create_modern_frame(toolbar)
+        button_frame.pack(fill="x")
+        
+        buttons_container = ctk.CTkFrame(button_frame, fg_color=("#ffffff", "#2d2d2d"))
+        buttons_container.pack(padx=20, pady=15)
+        
+        self.create_modern_button(buttons_container, "➕ Add Configuration", self.add_configuration_dialog, "success").pack(side="left", padx=(0, 15))
+        self.create_modern_button(buttons_container, "✏️ Edit Selected", self.edit_configuration, "primary").pack(side="left", padx=(0, 15))
+        self.create_modern_button(buttons_container, "🗑️ Delete Selected", self.delete_configuration, "danger").pack(side="left", padx=(0, 15))
+        self.create_modern_button(buttons_container, "🔄 Refresh", self.refresh_configurations, "secondary").pack(side="left")
+        
+        # Modern configurations list
+        self.configurations_frame = self.create_modern_scrollable_frame(config_tab)
+        self.configurations_frame.pack(fill="both", expand=True)
+
+    def create_settings_tab(self):
+        """Create settings tab"""
+        self.tabview.add("⚙️ Settings")
+        settings_tab = self.tabview.tab("⚙️ Settings")
+        
+        # Settings frame
+        settings_frame = self.create_modern_frame(settings_tab)
+        settings_frame.pack(fill="x", pady=(0, 20))
+        
+        settings_title = ctk.CTkLabel(
+            settings_frame,
+            text="🔧 ForceBindIP Settings",
+            font=ctk.CTkFont(family="SF Pro Display", size=16, weight="bold"),
+            text_color=("#495057", "#ffffff")
+        )
+        settings_title.pack(anchor="w", padx=20, pady=(15, 10))
+        
+        # ForceBindIP path setting
+        path_frame = ctk.CTkFrame(settings_frame, fg_color=("#ffffff", "#2d2d2d"))
+        path_frame.pack(fill="x", padx=20, pady=(0, 20))
+        
+        path_label = ctk.CTkLabel(
+            path_frame,
+            text="📂 ForceBindIP Path:",
+            font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold")
+        )
+        path_label.pack(anchor="w", padx=15, pady=(15, 5))
+        
+        path_entry_frame = ctk.CTkFrame(path_frame, fg_color=("#ffffff", "#2d2d2d"))
+        path_entry_frame.pack(fill="x", padx=15, pady=(0, 15))
+        
+        self.forcebindip_path_var = tk.StringVar(value=self.forcebindip_path)
+        path_entry = ctk.CTkEntry(
+            path_entry_frame,
+            textvariable=self.forcebindip_path_var,
+            placeholder_text="Path to ForceBindIP.exe or ForceBindIP64.exe",
+            width=400,
+            height=35,
+            corner_radius=8,
+            font=ctk.CTkFont(size=12)
+        )
+        path_entry.pack(side="left", padx=(0, 10))
+        
+        browse_path_btn = ctk.CTkButton(
+            path_entry_frame,
+            text="📁 Browse",
+            command=self.browse_forcebindip_path,
+            width=100,
+            height=35,
+            corner_radius=8
+        )
+        browse_path_btn.pack(side="left", padx=(0, 10))
+        
+        test_path_btn = ctk.CTkButton(
+            path_entry_frame,
+            text="🧪 Test",
+            command=self.test_forcebindip_path,
+            width=80,
+            height=35,
+            corner_radius=8,
+            fg_color=("#28a745", "#22c55e")
+        )
+        test_path_btn.pack(side="left")
+        
+        # Auto-detect section
+        detect_frame = ctk.CTkFrame(settings_frame, fg_color=("#ffffff", "#2d2d2d"))
+        detect_frame.pack(fill="x", padx=20, pady=(0, 20))
+        
+        detect_label = ctk.CTkLabel(
+            detect_frame,
+            text="🔍 Auto-Detection:",
+            font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold")
+        )
+        detect_label.pack(anchor="w", padx=15, pady=(15, 5))
+        
+        detect_buttons = ctk.CTkFrame(detect_frame, fg_color=("#ffffff", "#2d2d2d"))
+        detect_buttons.pack(fill="x", padx=15, pady=(0, 15))
+        
+        self.create_modern_button(detect_buttons, "🔍 Auto-Detect ForceBindIP", self.auto_detect_forcebindip, "primary", 200).pack(side="left", padx=(0, 15))
+        self.create_modern_button(detect_buttons, "📥 Download ForceBindIP", self.download_forcebindip_dialog, "warning", 180).pack(side="left")
+
+    def create_monitoring_tab(self):
+        """Create monitoring tab"""
         self.tabview.add("📊 Monitoring")
         monitor_tab = self.tabview.tab("📊 Monitoring")
         
@@ -424,7 +517,7 @@ class ModernBlackzAllocatorGUI:
         
         stats_title = ctk.CTkLabel(
             stats_frame,
-            text="📈 System Statistics",
+            text="📈 System Information",
             font=ctk.CTkFont(family="SF Pro Display", size=16, weight="bold"),
             text_color=("#495057", "#ffffff")
         )
@@ -445,7 +538,7 @@ class ModernBlackzAllocatorGUI:
         refresh_container = ctk.CTkFrame(monitor_tab, fg_color=("#f8f9fa", "#1e1e1e"))
         refresh_container.pack(pady=(0, 20))
         
-        self.create_modern_button(refresh_container, "🔄 Refresh Statistics", self.refresh_stats, "primary", 180).pack()
+        self.create_modern_button(refresh_container, "🔄 Refresh System Info", self.refresh_system_info, "primary", 180).pack()
         
         # Modern logs frame
         logs_frame = self.create_modern_frame(monitor_tab)
@@ -468,92 +561,88 @@ class ModernBlackzAllocatorGUI:
             font=ctk.CTkFont(family="SF Mono", size=11)
         )
         self.logs_text.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-    
-    # API Methods and other functions (fully implemented)
-    def api_request(self, method: str, endpoint: str, data: Optional[Dict] = None) -> Optional[Dict]:
-        """Make API request"""
-        try:
-            url = f"{self.api_base}{endpoint}"
-            
-            if method.upper() == 'GET':
-                response = requests.get(url, timeout=10)
-            elif method.upper() == 'POST':
-                response = requests.post(url, json=data, timeout=10)
-            elif method.upper() == 'PUT':
-                response = requests.put(url, json=data, timeout=10)
-            elif method.upper() == 'DELETE':
-                response = requests.delete(url, timeout=10)
-            else:
-                return None
-            
-            if response.status_code in [200, 201]:
-                return response.json()
-            else:
-                self.log_message(f"❌ API Error: {response.status_code} - {response.text}")
-                return None
-                
-        except requests.exceptions.RequestException as e:
-            self.log_message(f"❌ Connection Error: {str(e)}")
-            return None
-    
+
+    # Core functionality methods
     def log_message(self, message: str):
         """Add message to activity log"""
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = f"[{timestamp}] {message}\n"
         self.logs_text.insert("end", log_entry)
+        
+    def load_configuration(self):
+        """Load application configuration"""
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, 'r') as f:
+                    config = json.load(f)
+                    self.forcebindip_path = config.get('forcebindip_path', '')
+                    self.saved_configs = config.get('saved_configs', [])
+                    self.log_message("✅ Configuration loaded successfully")
+            else:
+                self.log_message("⚠️ No configuration file found, using defaults")
+        except Exception as e:
+            self.log_message(f"❌ Error loading configuration: {str(e)}")
+    
+    def save_configuration_to_file(self):
+        """Save application configuration to file"""
+        try:
+            config = {
+                'forcebindip_path': self.forcebindip_path,
+                'saved_configs': self.saved_configs
+            }
+            with open(self.config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+            self.log_message("✅ Configuration saved successfully")
+        except Exception as e:
+            self.log_message(f"❌ Error saving configuration: {str(e)}")
     
     def refresh_all_data(self):
-        """Refresh all data including enhanced pool information"""
+        """Refresh all data"""
         self.log_message("🔄 Refreshing all data...")
-        
-        # Refresh pools first (this populates the combos)
-        self.refresh_pools()
-        
-        # Update pool combo with enhanced information
-        self.update_pool_combo()
-        
-        # Refresh other data
-        self.refresh_allocations()
-        self.refresh_leases()
-        self.refresh_interfaces()
-        self.refresh_stats()
-        
+        self.refresh_network_interfaces()
+        self.refresh_configurations()
+        self.refresh_system_info()
         self.log_message("✅ All data refreshed successfully")
     
-    def refresh_pools(self):
-        """Refresh pools data and display in GUI"""
-        self.log_message("🔄 Refreshing pools...")
-        pools_data = self.api_request('GET', '/pools/')
-        
-        # Clear existing pool widgets
-        for widget in self.pools_frame.winfo_children():
+    def refresh_network_interfaces(self):
+        """Refresh network interfaces list"""
+        self.log_message("🔄 Refreshing network interfaces...")
+        try:
+            interfaces = []
+            for interface_name, addrs in psutil.net_if_addrs().items():
+                for addr in addrs:
+                    if addr.family == 2:  # IPv4
+                        interfaces.append(f"{addr.address} - {interface_name}")
+            
+            self.network_interfaces = interfaces
+            
+            # Update interface combo
+            if hasattr(self, 'interface_combo'):
+                self.interface_combo.configure(values=interfaces)
+                if interfaces:
+                    self.interface_combo.set(interfaces[0])
+            
+            # Update interface display
+            self.update_interfaces_display()
+            
+            self.log_message(f"✅ Found {len(interfaces)} network interfaces")
+        except Exception as e:
+            self.log_message(f"❌ Error refreshing interfaces: {str(e)}")
+    
+    def update_interfaces_display(self):
+        """Update the interfaces display in the interfaces tab"""
+        # Clear existing interface widgets
+        for widget in self.interfaces_frame.winfo_children():
             widget.destroy()
         
-        if pools_data:
-            for pool in pools_data:
-                # Get utilization
-                utilization_data = self.api_request('GET', f'/pools/{pool["id"]}/utilization')
-                utilization = utilization_data.get('utilization_percent', 0) if utilization_data else 0
-                
-                # Create modern pool card
-                self.create_pool_card(pool, utilization)
-            
-            self.log_message(f"✅ Refreshed {len(pools_data)} IP pools")
-        else:
-            # Show no pools message
-            no_pools_label = ctk.CTkLabel(
-                self.pools_frame,
-                text="No pools found. Create your first pool!",
-                font=ctk.CTkFont(size=16),
-                text_color=("#666666", "#999999")
-            )
-            no_pools_label.pack(pady=50)
+        for interface in self.network_interfaces:
+            ip_address, interface_name = interface.split(" - ", 1)
+            self.create_interface_card(ip_address, interface_name)
     
-    def create_pool_card(self, pool, utilization):
-        """Create a modern pool card widget"""
-        # Pool card frame
+    def create_interface_card(self, ip_address: str, interface_name: str):
+        """Create a modern interface card widget"""
         card = ctk.CTkFrame(
-            self.pools_frame,
+            self.interfaces_frame,
             corner_radius=15,
             fg_color=("#ffffff", "#2d2d2d"),
             border_width=1,
@@ -561,95 +650,414 @@ class ModernBlackzAllocatorGUI:
         )
         card.pack(fill="x", padx=10, pady=8)
         
-        # Card content
         content_frame = ctk.CTkFrame(card, fg_color=("#ffffff", "#2d2d2d"))
         content_frame.pack(fill="x", padx=15, pady=15)
         
-        # Pool header
+        # Interface header
         header_frame = ctk.CTkFrame(content_frame, fg_color=("#ffffff", "#2d2d2d"))
         header_frame.pack(fill="x", pady=(0, 10))
         
-        # Pool name and status
         name_label = ctk.CTkLabel(
             header_frame,
-            text=f"🏊‍♂️ {pool['name']}",
-            font=ctk.CTkFont(family="SF Pro Display", size=18, weight="bold"),
+            text=f"🌐 {interface_name}",
+            font=ctk.CTkFont(family="SF Pro Display", size=16, weight="bold"),
             text_color=("#000000", "#ffffff")
         )
         name_label.pack(side="left")
         
-        status_text = "🟢 Active" if pool['is_active'] else "🔴 Inactive"
-        status_label = ctk.CTkLabel(
-            header_frame,
-            text=status_text,
-            font=ctk.CTkFont(size=12, weight="bold"),
-            text_color=("#28a745", "#40ff40") if pool['is_active'] else ("#dc3545", "#ff6b6b")
-        )
-        status_label.pack(side="right")
-        
-        # Pool details
-        details_frame = ctk.CTkFrame(content_frame, fg_color=("#ffffff", "#2d2d2d"))
-        details_frame.pack(fill="x", pady=(0, 10))
-        
-        # CIDR and utilization
-        cidr_label = ctk.CTkLabel(
-            details_frame,
-            text=f"📍 CIDR: {pool['cidr']}",
+        # IP address
+        ip_label = ctk.CTkLabel(
+            content_frame,
+            text=f"📍 IP Address: {ip_address}",
             font=ctk.CTkFont(size=14),
             text_color=("#495057", "#b0b0b0")
         )
-        cidr_label.pack(side="left")
-        
-        util_color = "#28a745" if utilization < 80 else "#ffc107" if utilization < 95 else "#dc3545"
-        util_label = ctk.CTkLabel(
-            details_frame,
-            text=f"📊 Utilization: {utilization:.1f}%",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=(util_color, util_color)
-        )
-        util_label.pack(side="right")
-        
-        # Gateway and description
-        if pool.get('gateway'):
-            gateway_label = ctk.CTkLabel(
-                content_frame,
-                text=f"🌐 Gateway: {pool['gateway']}",
-                font=ctk.CTkFont(size=12),
-                text_color=("#6c757d", "#888888")
-            )
-            gateway_label.pack(anchor="w")
-        
-        if pool.get('description'):
-            desc_label = ctk.CTkLabel(
-                content_frame,
-                text=f"📝 {pool['description']}",
-                font=ctk.CTkFont(size=12),
-                text_color=("#6c757d", "#888888")
-            )
-            desc_label.pack(anchor="w", pady=(5, 0))
+        ip_label.pack(anchor="w")
         
         # Action buttons
         actions_frame = ctk.CTkFrame(content_frame, fg_color=("#ffffff", "#2d2d2d"))
         actions_frame.pack(fill="x", pady=(10, 0))
         
-        edit_btn = ctk.CTkButton(
+        use_btn = ctk.CTkButton(
             actions_frame,
-            text="✏️ Edit",
-            command=lambda: self.edit_pool_dialog(pool),
+            text="✅ Use This Interface",
+            command=lambda: self.select_interface(f"{ip_address} - {interface_name}"),
+            width=150,
+            height=30,
+            corner_radius=8,
+            font=ctk.CTkFont(size=12),
+            fg_color=("#28a745", "#22c55e"),
+            hover_color=("#1e7e34", "#16a34a")
+        )
+        use_btn.pack(side="left", padx=(0, 10))
+        
+        test_btn = ctk.CTkButton(
+            actions_frame,
+            text="🧪 Test",
+            command=lambda: self.test_specific_interface(ip_address),
             width=80,
             height=30,
             corner_radius=8,
             font=ctk.CTkFont(size=12),
-            fg_color=("#6c757d", "#64748b"),
-            hover_color=("#545b62", "#475569")
+            fg_color=("#ffc107", "#f59e0b"),
+            hover_color=("#e0a800", "#d97706")
         )
-        edit_btn.pack(side="left", padx=(0, 10))
+        test_btn.pack(side="left")
+
+    # Continue with remaining methods...
+    
+    # ForceBindIP functionality methods
+    def browse_application(self):
+        """Browse for application to launch"""
+        self.log_message("📁 Opening application browser...")
+        filetypes = [
+            ("Executable files", "*.exe"),
+            ("All files", "*.*")
+        ]
+        
+        filename = filedialog.askopenfilename(
+            title="Select Application to Launch",
+            filetypes=filetypes,
+            initialdir=os.path.expanduser("~")
+        )
+        
+        if filename:
+            self.app_path_var.set(filename)
+            self.log_message(f"📱 Selected application: {os.path.basename(filename)}")
+    
+    def select_interface(self, interface: str):
+        """Select an interface for binding"""
+        self.interface_var.set(interface)
+        self.log_message(f"✅ Selected interface: {interface}")
+        # Switch back to launcher tab
+        self.tabview.set("🚀 Launcher")
+    
+    def test_specific_interface(self, ip_address: str):
+        """Test connectivity on specific interface"""
+        self.log_message(f"🧪 Testing interface {ip_address}...")
+        
+        def test_thread():
+            try:
+                # Simple ping test
+                result = subprocess.run(
+                    ["ping", "-n", "1", "-S", ip_address, "8.8.8.8"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+                
+                if result.returncode == 0:
+                    self.log_message(f"✅ Interface {ip_address} test successful")
+                else:
+                    self.log_message(f"❌ Interface {ip_address} test failed")
+            except Exception as e:
+                self.log_message(f"❌ Interface test error: {str(e)}")
+        
+        threading.Thread(target=test_thread, daemon=True).start()
+    
+    def launch_application(self):
+        """Launch application with ForceBindIP"""
+        app_path = self.app_path_var.get().strip()
+        interface = self.interface_var.get().strip()
+        args = self.args_var.get().strip()
+        arch = self.arch_var.get()
+        delayed = self.delayed_injection_var.get()
+        
+        if not app_path:
+            self.show_error("Please select an application to launch")
+            return
+            
+        if not interface:
+            self.show_error("Please select a network interface")
+            return
+            
+        if not self.forcebindip_path:
+            self.show_error("Please configure ForceBindIP path in Settings")
+            return
+        
+        # Extract IP from interface string
+        ip_address = interface.split(" - ")[0]
+        
+        # Build ForceBindIP command
+        forcebindip_exe = self.forcebindip_path
+        if arch == "x64" and "64" not in forcebindip_exe:
+            # Try to find x64 version
+            dir_path = os.path.dirname(forcebindip_exe)
+            x64_path = os.path.join(dir_path, "ForceBindIP64.exe")
+            if os.path.exists(x64_path):
+                forcebindip_exe = x64_path
+        
+        cmd = [forcebindip_exe]
+        
+        if delayed:
+            cmd.append("-i")
+        
+        cmd.extend([ip_address, app_path])
+        
+        if args:
+            cmd.extend(args.split())
+        
+        self.log_message(f"🚀 Launching: {os.path.basename(app_path)} bound to {ip_address}")
+        
+        def launch_thread():
+            try:
+                # Launch the application
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                
+                self.log_message(f"✅ Application launched successfully (PID: {process.pid})")
+                
+                # Wait a moment to check if it fails immediately
+                try:
+                    stdout, stderr = process.communicate(timeout=2)
+                    if process.returncode != 0 and stderr:
+                        self.log_message(f"❌ Launch error: {stderr}")
+                except subprocess.TimeoutExpired:
+                    # Process is still running, which is good
+                    self.log_message(f"✅ Application is running with network binding")
+                    
+            except Exception as e:
+                self.log_message(f"❌ Launch failed: {str(e)}")
+        
+        threading.Thread(target=launch_thread, daemon=True).start()
+    
+    def save_configuration_dialog(self):
+        """Save current configuration dialog"""
+        app_path = self.app_path_var.get().strip()
+        interface = self.interface_var.get().strip()
+        args = self.args_var.get().strip()
+        arch = self.arch_var.get()
+        delayed = self.delayed_injection_var.get()
+        
+        if not app_path or not interface:
+            self.show_error("Please select an application and interface first")
+            return
+        
+        # Create save dialog
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title("💾 Save Configuration")
+        dialog.geometry("400x300")
+        dialog.grab_set()
+        
+        # Main frame
+        main_frame = ctk.CTkFrame(dialog, corner_radius=15)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Title
+        title_label = ctk.CTkLabel(
+            main_frame,
+            text="💾 Save Application Configuration",
+            font=ctk.CTkFont(size=16, weight="bold")
+        )
+        title_label.pack(pady=20)
+        
+        # Configuration name
+        name_label = ctk.CTkLabel(
+            main_frame,
+            text="Configuration Name:",
+            font=ctk.CTkFont(size=13, weight="bold")
+        )
+        name_label.pack(anchor="w", padx=20, pady=(10, 5))
+        
+        name_var = tk.StringVar(value=os.path.basename(app_path).replace('.exe', ''))
+        name_entry = ctk.CTkEntry(
+            main_frame,
+            textvariable=name_var,
+            width=300,
+            height=35,
+            corner_radius=8
+        )
+        name_entry.pack(padx=20, pady=(0, 20))
+        
+        # Configuration preview
+        preview_label = ctk.CTkLabel(
+            main_frame,
+            text="Configuration Preview:",
+            font=ctk.CTkFont(size=13, weight="bold")
+        )
+        preview_label.pack(anchor="w", padx=20, pady=(10, 5))
+        
+        preview_text = f"""Application: {os.path.basename(app_path)}
+Interface: {interface}
+Arguments: {args or 'None'}
+Architecture: {arch}
+Delayed Injection: {'Yes' if delayed else 'No'}"""
+        
+        preview_box = ctk.CTkTextbox(
+            main_frame,
+            height=100,
+            corner_radius=8
+        )
+        preview_box.pack(fill="x", padx=20, pady=(0, 20))
+        preview_box.insert("1.0", preview_text)
+        preview_box.configure(state="disabled")
+        
+        # Buttons
+        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_frame.pack(pady=10)
+        
+        def save_config():
+            name = name_var.get().strip()
+            if not name:
+                return
+                
+            config = {
+                'name': name,
+                'app_path': app_path,
+                'interface': interface,
+                'args': args,
+                'architecture': arch,
+                'delayed_injection': delayed,
+                'created': datetime.now().isoformat()
+            }
+            
+            self.saved_configs.append(config)
+            self.save_configuration_to_file()
+            self.refresh_configurations()
+            self.refresh_quick_launch()
+            self.log_message(f"✅ Saved configuration: {name}")
+            dialog.destroy()
+        
+        cancel_btn = ctk.CTkButton(
+            button_frame,
+            text="Cancel",
+            command=dialog.destroy,
+            width=100,
+            height=35,
+            fg_color=("#6c757d", "#64748b")
+        )
+        cancel_btn.pack(side="left", padx=(0, 10))
+        
+        save_btn = ctk.CTkButton(
+            button_frame,
+            text="💾 Save",
+            command=save_config,
+            width=100,
+            height=35,
+            fg_color=("#28a745", "#22c55e")
+        )
+        save_btn.pack(side="left")
+    
+    def refresh_configurations(self):
+        """Refresh the configurations display"""
+        self.log_message("🔄 Refreshing configurations...")
+        
+        # Clear existing configuration widgets
+        for widget in self.configurations_frame.winfo_children():
+            widget.destroy()
+        
+        if not self.saved_configs:
+            no_configs_label = ctk.CTkLabel(
+                self.configurations_frame,
+                text="No saved configurations. Create one from the Launcher tab!",
+                font=ctk.CTkFont(size=16),
+                text_color=("#666666", "#999999")
+            )
+            no_configs_label.pack(pady=50)
+            return
+        
+        for i, config in enumerate(self.saved_configs):
+            self.create_configuration_card(config, i)
+    
+    def create_configuration_card(self, config: dict, index: int):
+        """Create a configuration card widget"""
+        card = ctk.CTkFrame(
+            self.configurations_frame,
+            corner_radius=15,
+            fg_color=("#ffffff", "#2d2d2d"),
+            border_width=1,
+            border_color=("#dee2e6", "#404040")
+        )
+        card.pack(fill="x", padx=10, pady=8)
+        
+        content_frame = ctk.CTkFrame(card, fg_color=("#ffffff", "#2d2d2d"))
+        content_frame.pack(fill="x", padx=15, pady=15)
+        
+        # Configuration header
+        header_frame = ctk.CTkFrame(content_frame, fg_color=("#ffffff", "#2d2d2d"))
+        header_frame.pack(fill="x", pady=(0, 10))
+        
+        name_label = ctk.CTkLabel(
+            header_frame,
+            text=f"🎮 {config['name']}",
+            font=ctk.CTkFont(family="SF Pro Display", size=16, weight="bold"),
+            text_color=("#000000", "#ffffff")
+        )
+        name_label.pack(side="left")
+        
+        created_label = ctk.CTkLabel(
+            header_frame,
+            text=f"Created: {config.get('created', 'Unknown')[:10]}",
+            font=ctk.CTkFont(size=11),
+            text_color=("#6c757d", "#888888")
+        )
+        created_label.pack(side="right")
+        
+        # Configuration details
+        app_label = ctk.CTkLabel(
+            content_frame,
+            text=f"📱 App: {os.path.basename(config['app_path'])}",
+            font=ctk.CTkFont(size=12),
+            text_color=("#495057", "#b0b0b0")
+        )
+        app_label.pack(anchor="w")
+        
+        interface_label = ctk.CTkLabel(
+            content_frame,
+            text=f"🌐 Interface: {config['interface']}",
+            font=ctk.CTkFont(size=12),
+            text_color=("#495057", "#b0b0b0")
+        )
+        interface_label.pack(anchor="w")
+        
+        if config.get('args'):
+            args_label = ctk.CTkLabel(
+                content_frame,
+                text=f"⚙️ Args: {config['args']}",
+                font=ctk.CTkFont(size=12),
+                text_color=("#495057", "#b0b0b0")
+            )
+            args_label.pack(anchor="w")
+        
+        # Action buttons
+        actions_frame = ctk.CTkFrame(content_frame, fg_color=("#ffffff", "#2d2d2d"))
+        actions_frame.pack(fill="x", pady=(10, 0))
+        
+        launch_btn = ctk.CTkButton(
+            actions_frame,
+            text="🚀 Launch",
+            command=lambda: self.launch_from_config(config),
+            width=100,
+            height=30,
+            corner_radius=8,
+            font=ctk.CTkFont(size=12),
+            fg_color=("#28a745", "#22c55e"),
+            hover_color=("#1e7e34", "#16a34a")
+        )
+        launch_btn.pack(side="left", padx=(0, 10))
+        
+        load_btn = ctk.CTkButton(
+            actions_frame,
+            text="📥 Load",
+            command=lambda: self.load_configuration(config),
+            width=80,
+            height=30,
+            corner_radius=8,
+            font=ctk.CTkFont(size=12),
+            fg_color=("#007bff", "#0066cc"),
+            hover_color=("#0056b3", "#004999")
+        )
+        load_btn.pack(side="left", padx=(0, 10))
         
         delete_btn = ctk.CTkButton(
             actions_frame,
-            text="🗑️ Delete",
-            command=lambda: self.delete_pool_dialog(pool),
-            width=90,
+            text="🗑️",
+            command=lambda: self.delete_configuration_at_index(index),
+            width=40,
             height=30,
             corner_radius=8,
             font=ctk.CTkFont(size=12),
@@ -658,260 +1066,445 @@ class ModernBlackzAllocatorGUI:
         )
         delete_btn.pack(side="left")
     
-    def update_pool_combo(self):
-        """Update pool combobox values with enhanced information"""
-        pools_data = self.api_request('GET', '/pools/')
-        if pools_data:
-            # Get utilization data for each pool
-            pool_options = []
-            pool_details = {}
-            
-            for pool in pools_data:
-                if pool['is_active']:
-                    # Get utilization info
-                    util_data = self.api_request('GET', f'/pools/{pool["id"]}/utilization')
-                    if util_data:
-                        used_ips = util_data.get('allocated_ips', 0)
-                        total_ips = util_data.get('total_ips', 0)
-                        available_ips = total_ips - used_ips
-                        utilization_pct = (used_ips / total_ips * 100) if total_ips > 0 else 0
-                        
-                        # Create descriptive option text
-                        option_text = f"{pool['id']} - {pool['name']} ({pool['cidr']}) | {available_ips}/{total_ips} available ({utilization_pct:.0f}% used)"
-                        pool_options.append(option_text)
-                        pool_details[option_text] = {
-                            'id': pool['id'],
-                            'name': pool['name'],
-                            'cidr': pool['cidr'],
-                            'available': available_ips,
-                            'total': total_ips,
-                            'utilization': utilization_pct
-                        }
-                    else:
-                        # Fallback if utilization data unavailable
-                        option_text = f"{pool['id']} - {pool['name']} ({pool['cidr']})"
-                        pool_options.append(option_text)
-                        pool_details[option_text] = {
-                            'id': pool['id'],
-                            'name': pool['name'],
-                            'cidr': pool['cidr'],
-                            'available': '?',
-                            'total': '?',
-                            'utilization': 0
-                        }
-            
-            # Sort by utilization (least used first) to recommend best pools
-            pool_options.sort(key=lambda x: pool_details[x]['utilization'])
-            
-            # Update combobox
-            if hasattr(self, 'pool_combo') and self.pool_combo:
-                self.pool_combo.configure(values=pool_options)
-                if pool_options:
-                    # Auto-select the pool with most available space
-                    best_pool = min(pool_options, key=lambda x: pool_details[x]['utilization'])
-                    self.pool_combo.set(best_pool)
-                    self.log_message(f"📋 Auto-selected optimal pool: {pool_details[best_pool]['name']} ({pool_details[best_pool]['available']} IPs available)")
-                else:
-                    self.pool_combo.set("No active pools available")
-                    self.log_message("⚠️ No active pools found")
-            
-            # Store pool details for other components
-            self.pool_details = pool_details
-            return pool_options
-        else:
-            if hasattr(self, 'pool_combo') and self.pool_combo:
-                self.pool_combo.configure(values=["No pools available"])
-                self.pool_combo.set("No pools available")
-            self.log_message("❌ Failed to load pools")
-            return []
-
-    def get_selected_pool_id(self):
-        """Get the ID of the currently selected pool"""
-        if hasattr(self, 'pool_var') and self.pool_var.get():
-            selected = self.pool_var.get()
-            if selected and " - " in selected and selected != "No pools available" and selected != "No active pools available":
-                return int(selected.split(' - ')[0])
-        return None
-
-    def allocate_next_ip(self): 
-        """Enhanced IP allocation with better pool validation"""
-        self.log_message("🎯 Allocating next IP...")
+    def launch_from_config(self, config: dict):
+        """Launch application from saved configuration"""
+        self.log_message(f"🚀 Launching from config: {config['name']}")
         
-        pool_id = self.get_selected_pool_id()
-        if not pool_id:
-            self.show_error("Please select a valid pool first")
+        # Load configuration into launcher
+        self.app_path_var.set(config['app_path'])
+        self.interface_var.set(config['interface'])
+        self.args_var.set(config.get('args', ''))
+        self.arch_var.set(config.get('architecture', 'x64'))
+        self.delayed_injection_var.set(config.get('delayed_injection', False))
+        
+        # Launch the application
+        self.launch_application()
+    
+    def load_configuration(self, config: dict):
+        """Load configuration into launcher tab"""
+        self.app_path_var.set(config['app_path'])
+        self.interface_var.set(config['interface'])
+        self.args_var.set(config.get('args', ''))
+        self.arch_var.set(config.get('architecture', 'x64'))
+        self.delayed_injection_var.set(config.get('delayed_injection', False))
+        
+        self.log_message(f"📥 Loaded configuration: {config['name']}")
+        
+        # Switch to launcher tab
+        self.tabview.set("🚀 Launcher")
+    
+    def delete_configuration_at_index(self, index: int):
+        """Delete configuration at specific index"""
+        if 0 <= index < len(self.saved_configs):
+            config_name = self.saved_configs[index]['name']
+            
+            # Create confirmation dialog
+            dialog = ctk.CTkToplevel(self.root)
+            dialog.title("Confirm Delete")
+            dialog.geometry("300x150")
+            dialog.grab_set()
+            
+            warning_label = ctk.CTkLabel(
+                dialog,
+                text=f"Delete '{config_name}'?",
+                font=ctk.CTkFont(size=14, weight="bold")
+            )
+            warning_label.pack(pady=20)
+            
+            button_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+            button_frame.pack(pady=10)
+            
+            def confirm_delete():
+                del self.saved_configs[index]
+                self.save_configuration_to_file()
+                self.refresh_configurations()
+                self.refresh_quick_launch()
+                self.log_message(f"🗑️ Deleted configuration: {config_name}")
+                dialog.destroy()
+            
+            cancel_btn = ctk.CTkButton(
+                button_frame,
+                text="Cancel",
+                command=dialog.destroy,
+                width=80,
+                fg_color=("#6c757d", "#64748b")
+            )
+            cancel_btn.pack(side="left", padx=(0, 10))
+            
+            delete_btn = ctk.CTkButton(
+                button_frame,
+                text="Delete",
+                command=confirm_delete,
+                width=80,
+                fg_color=("#dc3545", "#ef4444")
+            )
+            delete_btn.pack(side="left")
+    
+    def refresh_quick_launch(self):
+        """Refresh quick launch buttons"""
+        # Clear existing quick launch widgets
+        for widget in self.quick_launch_frame.winfo_children():
+            widget.destroy()
+        
+        if not self.saved_configs:
+            no_configs_label = ctk.CTkLabel(
+                self.quick_launch_frame,
+                text="Save configurations to see quick launch buttons here!",
+                font=ctk.CTkFont(size=14),
+                text_color=("#666666", "#999999")
+            )
+            no_configs_label.pack(pady=30)
             return
         
-        # Get pool details for validation
-        if hasattr(self, 'pool_details') and self.pool_var.get() in self.pool_details:
-            pool_info = self.pool_details[self.pool_var.get()]
-            if pool_info['available'] == 0:
-                self.show_error(f"Pool '{pool_info['name']}' has no available IPs")
-                return
-        
-        data = {
-            "pool_id": pool_id,
-            "client_id": self.client_id_var.get() or None,
-            "allocation_strategy": self.strategy_var.get(),
-            "lease_duration": 86400
-        }
-        
-        result = self.api_request('POST', '/allocations/', data)
-        if result and result.get('success'):
-            ip_address = result.get('ip_address')
-            self.log_message(f"✅ Allocated IP: {ip_address}")
+        # Create quick launch buttons
+        for config in self.saved_configs[:8]:  # Limit to 8 for clean layout
+            btn_frame = ctk.CTkFrame(
+                self.quick_launch_frame,
+                corner_radius=10,
+                fg_color=("#f8f9fa", "#2d2d2d"),
+                border_width=1,
+                border_color=("#dee2e6", "#404040")
+            )
+            btn_frame.pack(fill="x", padx=5, pady=5)
             
-            # Refresh pool combo to update availability
-            self.update_pool_combo()
-            self.refresh_allocations()
-            self.show_success(f"✅ Allocated IP: {ip_address}")
+            content_frame = ctk.CTkFrame(btn_frame, fg_color=("#f8f9fa", "#2d2d2d"))
+            content_frame.pack(fill="x", padx=10, pady=10)
+            
+            name_label = ctk.CTkLabel(
+                content_frame,
+                text=f"🎮 {config['name']}",
+                font=ctk.CTkFont(size=14, weight="bold"),
+                anchor="w"
+            )
+            name_label.pack(fill="x")
+            
+            details_label = ctk.CTkLabel(
+                content_frame,
+                text=f"{os.path.basename(config['app_path'])} → {config['interface'].split(' - ')[0]}",
+                font=ctk.CTkFont(size=11),
+                text_color=("#6c757d", "#888888"),
+                anchor="w"
+            )
+            details_label.pack(fill="x", pady=(2, 8))
+            
+            launch_btn = ctk.CTkButton(
+                content_frame,
+                text="🚀 Quick Launch",
+                command=lambda c=config: self.launch_from_config(c),
+                height=30,
+                corner_radius=8,
+                font=ctk.CTkFont(size=12),
+                fg_color=("#28a745", "#22c55e"),
+                hover_color=("#1e7e34", "#16a34a")
+            )
+            launch_btn.pack(fill="x")
+    
+    # Settings tab methods
+    def browse_forcebindip_path(self):
+        """Browse for ForceBindIP executable"""
+        self.log_message("📁 Browsing for ForceBindIP executable...")
+        
+        filetypes = [
+            ("ForceBindIP executables", "ForceBindIP*.exe"),
+            ("Executable files", "*.exe"),
+            ("All files", "*.*")
+        ]
+        
+        filename = filedialog.askopenfilename(
+            title="Select ForceBindIP Executable",
+            filetypes=filetypes,
+            initialdir=os.path.expanduser("~")
+        )
+        
+        if filename:
+            self.forcebindip_path = filename
+            self.forcebindip_path_var.set(filename)
+            self.save_configuration_to_file()
+            self.log_message(f"📂 ForceBindIP path set: {filename}")
+    
+    def test_forcebindip_path(self):
+        """Test if ForceBindIP path is valid"""
+        path = self.forcebindip_path_var.get().strip()
+        
+        if not path:
+            self.show_error("Please enter or browse for ForceBindIP path")
+            return
+        
+        if not os.path.exists(path):
+            self.show_error("ForceBindIP executable not found at specified path")
+            return
+        
+        try:
+            # Test by running with help flag
+            result = subprocess.run([path], capture_output=True, text=True, timeout=5)
+            
+            # ForceBindIP typically returns usage info when run without args
+            if "ForceBindIP" in result.stderr or "usage" in result.stderr.lower():
+                self.forcebindip_path = path
+                self.save_configuration_to_file()
+                self.show_success("ForceBindIP executable is valid!")
+                self.log_message("✅ ForceBindIP test successful")
+            else:
+                self.show_error("File does not appear to be ForceBindIP")
+                
+        except Exception as e:
+            self.show_error(f"Error testing ForceBindIP: {str(e)}")
+    
+    def auto_detect_forcebindip(self):
+        """Auto-detect ForceBindIP installation"""
+        self.log_message("🔍 Auto-detecting ForceBindIP...")
+        
+        # Common locations to check
+        search_paths = [
+            os.path.join(os.environ.get("ProgramFiles", "C:\\Program Files"), "ForceBindIP"),
+            os.path.join(os.environ.get("ProgramFiles(x86)", "C:\\Program Files (x86)"), "ForceBindIP"),
+            os.path.join(os.path.expanduser("~"), "Downloads"),
+            os.path.join(os.path.expanduser("~"), "Desktop"),
+            os.getcwd()
+        ]
+        
+        found_paths = []
+        
+        for search_path in search_paths:
+            if os.path.exists(search_path):
+                for root, dirs, files in os.walk(search_path):
+                    for file in files:
+                        if file.lower().startswith("forcebindip") and file.lower().endswith(".exe"):
+                            full_path = os.path.join(root, file)
+                            found_paths.append(full_path)
+        
+        if found_paths:
+            # Prefer 64-bit version
+            best_path = None
+            for path in found_paths:
+                if "64" in path:
+                    best_path = path
+                    break
+            
+            if not best_path:
+                best_path = found_paths[0]
+            
+            self.forcebindip_path = best_path
+            self.forcebindip_path_var.set(best_path)
+            self.save_configuration_to_file()
+            self.log_message(f"✅ Auto-detected ForceBindIP: {best_path}")
+            self.show_success(f"Found ForceBindIP at: {os.path.basename(best_path)}")
         else:
-            error_msg = result.get('error', 'Unknown error') if result else 'Failed to allocate IP'
-            self.log_message(f"❌ Failed to allocate IP: {error_msg}")
-            self.show_error(f"Failed to allocate IP: {error_msg}")
-
-    # Implemented button actions
-    def create_pool_dialog(self): 
-        self.log_message("✨ Opening Create Pool dialog...")
-        CreatePoolDialog(self.root, self.api_request, self.refresh_all_data)
-        
-    def edit_pool_dialog(self, pool): 
-        self.log_message(f"✏️ Opening Edit Pool dialog for {pool['name']}...")
-        EditPoolDialog(self.root, self.api_request, self.refresh_all_data, pool)
-        
-    def delete_pool(self): 
-        """Show message to select a pool first"""
-        self.log_message("🗑️ Please click the delete button on a specific pool card")
-        
-    def delete_pool_dialog(self, pool): 
-        self.log_message(f"🗑️ Delete Pool request for {pool['name']}...")
-        
-        # Create confirmation dialog
+            self.log_message("❌ ForceBindIP not found in common locations")
+            self.show_error("ForceBindIP not found. Please download and install it first.")
+    
+    def download_forcebindip_dialog(self):
+        """Show download ForceBindIP dialog"""
         dialog = ctk.CTkToplevel(self.root)
-        dialog.title("Confirm Delete")
-        dialog.geometry("400x200")
+        dialog.title("📥 Download ForceBindIP")
+        dialog.geometry("500x300")
         dialog.grab_set()
         
-        # Warning message
-        warning_label = ctk.CTkLabel(
-            dialog,
-            text=f"⚠️ Delete Pool '{pool['name']}'?",
-            font=ctk.CTkFont(size=16, weight="bold"),
-            text_color=("#dc3545", "#ff6b6b")
+        main_frame = ctk.CTkFrame(dialog, corner_radius=15)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        title_label = ctk.CTkLabel(
+            main_frame,
+            text="📥 Download ForceBindIP",
+            font=ctk.CTkFont(size=18, weight="bold")
         )
-        warning_label.pack(pady=20)
+        title_label.pack(pady=20)
+        
+        info_text = """ForceBindIP is required to use this application.
+        
+You can download it from the official source:
+https://r1ch.net/projects/forcebindip
+
+After downloading:
+1. Extract the files to a folder
+2. Use the Settings tab to set the path to ForceBindIP.exe or ForceBindIP64.exe
+3. Test the path to ensure it works
+
+The application supports both x86 and x64 versions."""
         
         info_label = ctk.CTkLabel(
-            dialog,
-            text="This action cannot be undone.\nAll allocations in this pool will be removed.",
+            main_frame,
+            text=info_text,
             font=ctk.CTkFont(size=12),
-            text_color=("#6c757d", "#888888")
+            justify="left"
         )
-        info_label.pack(pady=10)
+        info_label.pack(padx=20, pady=20)
         
-        # Buttons
-        button_frame = ctk.CTkFrame(dialog, fg_color="transparent")
-        button_frame.pack(pady=20)
+        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_frame.pack(pady=10)
         
-        def confirm_delete():
-            result = self.api_request('DELETE', f'/pools/{pool["id"]}')
-            if result:
-                self.log_message(f"✅ Deleted pool: {pool['name']}")
-                self.refresh_all_data()
-                dialog.destroy()
-            else:
-                self.log_message(f"❌ Failed to delete pool: {pool['name']}")
+        def open_download_page():
+            import webbrowser
+            webbrowser.open("https://r1ch.net/projects/forcebindip")
+            self.log_message("🌐 Opened ForceBindIP download page")
         
-        cancel_btn = ctk.CTkButton(
+        download_btn = ctk.CTkButton(
             button_frame,
-            text="Cancel",
+            text="🌐 Open Download Page",
+            command=open_download_page,
+            width=180,
+            height=35,
+            fg_color=("#007bff", "#0066cc")
+        )
+        download_btn.pack(side="left", padx=(0, 10))
+        
+        close_btn = ctk.CTkButton(
+            button_frame,
+            text="Close",
             command=dialog.destroy,
-            width=100,
-            corner_radius=10,
+            width=80,
+            height=35,
             fg_color=("#6c757d", "#64748b")
         )
-        cancel_btn.pack(side="left", padx=(0, 10))
-        
-        delete_btn = ctk.CTkButton(
-            button_frame,
-            text="Delete",
-            command=confirm_delete,
-            width=100,
-            corner_radius=10,
-            fg_color=("#dc3545", "#ef4444")
-        )
-        delete_btn.pack(side="left")
-        
-    def reserve_specific_ip_dialog(self): 
-        self.log_message("📌 Opening Reserve Specific IP dialog...")
-        ReserveIPDialog(self.root, self.api_request, self.refresh_allocations)
-        
-    def deallocate_ip(self): 
-        self.log_message("❌ Deallocate IP functionality - please select an allocation first")
-        
-    def refresh_allocations(self): 
-        self.log_message("🔄 Refreshing allocations...")
-        # Implementation for allocations refresh
-        
-    def renew_lease_dialog(self): 
-        self.log_message("🔄 Renew Lease dialog opened")
-        
-    def cleanup_expired_leases(self): 
-        self.log_message("🧹 Cleaning up expired leases...")
-        result = self.api_request('POST', '/leases/cleanup')
-        if result:
-            self.log_message("✅ Expired lease cleanup completed")
-            self.refresh_leases()
-        else:
-            self.log_message("❌ Failed to cleanup expired leases")
-        
-    def refresh_leases(self): 
-        self.log_message("🔄 Refreshing leases...")
-        
-    def bind_ip_dialog(self): 
-        self.log_message("🔗 Bind IP dialog opened")
-        
-    def unbind_ip_dialog(self): 
-        self.log_message("🔓 Unbind IP dialog opened")
-        
-    def test_connectivity_dialog(self): 
-        self.log_message("📡 Test Connectivity dialog opened")
-        
-    def refresh_interfaces(self): 
-        self.log_message("🔄 Refreshing interfaces...")
-        
-    def refresh_stats(self): 
-        self.log_message("📈 Refreshing statistics...")
-        stats_data = self.api_request('GET', '/stats/system')
-        if stats_data:
-            stats_text = f"""🚀 BlackzAllocator System Statistics
-
-📊 Pools:
-  • Total Pools: {stats_data['total_pools']}
-  • Active Pools: {stats_data['active_pools']}
-
-💻 Allocations:
-  • Total Allocations: {stats_data['total_allocations']}
-  • Active Allocations: {stats_data['active_allocations']}
-
-⏰ Leases:
-  • Total Leases: {stats_data['total_leases']}
-  • Active Leases: {stats_data['active_leases']}
-  • Expired Leases: {stats_data['expired_leases']}
-
-🌐 Network Interfaces:
-  • Total Interfaces: {stats_data['system_interfaces']}
-  • Active Interfaces: {stats_data['active_interfaces']}
-
-🔄 Last Updated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-"""
-            
-            self.stats_text.delete("1.0", "end")
-            self.stats_text.insert("1.0", stats_text)
-            self.log_message("✅ Statistics refreshed")
-        else:
-            self.log_message("❌ Failed to refresh statistics")
+        close_btn.pack(side="left")
     
+    # Interface management methods
+    def show_interface_details(self):
+        """Show detailed interface information"""
+        self.log_message("📊 Showing interface details...")
+        
+        dialog = ctk.CTkToplevel(self.root)
+        dialog.title("🌐 Network Interface Details")
+        dialog.geometry("600x500")
+        dialog.grab_set()
+        
+        main_frame = ctk.CTkFrame(dialog, corner_radius=15)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        title_label = ctk.CTkLabel(
+            main_frame,
+            text="🌐 Network Interface Information",
+            font=ctk.CTkFont(size=18, weight="bold")
+        )
+        title_label.pack(pady=20)
+        
+        details_text = ctk.CTkTextbox(
+            main_frame,
+            corner_radius=10,
+            font=ctk.CTkFont(family="SF Mono", size=11)
+        )
+        details_text.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        
+        # Gather detailed interface information
+        try:
+            info_lines = []
+            interfaces = psutil.net_if_addrs()
+            stats = psutil.net_if_stats()
+            
+            for interface_name, addrs in interfaces.items():
+                info_lines.append(f"🌐 Interface: {interface_name}")
+                info_lines.append("-" * 50)
+                
+                # Get stats if available
+                if interface_name in stats:
+                    stat = stats[interface_name]
+                    info_lines.append(f"  📊 Status: {'Up' if stat.isup else 'Down'}")
+                    info_lines.append(f"  🔗 MTU: {stat.mtu}")
+                    info_lines.append(f"  🏃 Speed: {stat.speed} Mbps" if stat.speed > 0 else "  🏃 Speed: Unknown")
+                
+                # Get addresses
+                for addr in addrs:
+                    if addr.family == 2:  # IPv4
+                        info_lines.append(f"  📍 IPv4: {addr.address}")
+                        if addr.netmask:
+                            info_lines.append(f"  🎭 Netmask: {addr.netmask}")
+                    elif addr.family == 17 and addr.address:  # MAC
+                        info_lines.append(f"  🏷️ MAC: {addr.address}")
+                
+                info_lines.append("")
+            
+            details_text.insert("1.0", "\n".join(info_lines))
+            
+        except Exception as e:
+            details_text.insert("1.0", f"❌ Error gathering interface details: {str(e)}")
+        
+        details_text.configure(state="disabled")
+        
+        close_btn = ctk.CTkButton(
+            main_frame,
+            text="Close",
+            command=dialog.destroy,
+            width=100,
+            height=35
+        )
+        close_btn.pack(pady=10)
+    
+    def test_interface_connection(self):
+        """Test connection on all interfaces"""
+        self.log_message("🧪 Testing all interface connections...")
+        
+        def test_all_thread():
+            for interface in self.network_interfaces:
+                ip_address = interface.split(" - ")[0]
+                self.test_specific_interface(ip_address)
+        
+        threading.Thread(target=test_all_thread, daemon=True).start()
+    
+    def refresh_system_info(self):
+        """Refresh system information display"""
+        self.log_message("📈 Refreshing system information...")
+        
+        try:
+            # Gather system information
+            info_lines = []
+            
+            # System info
+            info_lines.append("🖥️ SYSTEM INFORMATION")
+            info_lines.append("=" * 50)
+            info_lines.append(f"Platform: {os.name} {os.sys.platform}")
+            
+            # CPU info
+            info_lines.append(f"CPU Usage: {psutil.cpu_percent(interval=1):.1f}%")
+            info_lines.append(f"CPU Count: {psutil.cpu_count()} cores")
+            
+            # Memory info
+            memory = psutil.virtual_memory()
+            info_lines.append(f"Memory Usage: {memory.percent:.1f}% ({memory.used // (1024**3)} GB / {memory.total // (1024**3)} GB)")
+            
+            # Network interfaces count
+            info_lines.append(f"Network Interfaces: {len(self.network_interfaces)} detected")
+            
+            info_lines.append("")
+            info_lines.append("🌐 NETWORK INTERFACES")
+            info_lines.append("=" * 50)
+            
+            for interface in self.network_interfaces:
+                ip_address, interface_name = interface.split(" - ", 1)
+                info_lines.append(f"• {interface_name}: {ip_address}")
+            
+            info_lines.append("")
+            info_lines.append("🔧 FORCEBINDIP CONFIGURATION")
+            info_lines.append("=" * 50)
+            info_lines.append(f"ForceBindIP Path: {self.forcebindip_path or 'Not configured'}")
+            info_lines.append(f"Saved Configurations: {len(self.saved_configs)}")
+            
+            info_lines.append("")
+            info_lines.append(f"🔄 Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            # Update display
+            self.stats_text.delete("1.0", "end")
+            self.stats_text.insert("1.0", "\n".join(info_lines))
+            
+            self.log_message("✅ System information refreshed")
+            
+        except Exception as e:
+            self.log_message(f"❌ Error refreshing system info: {str(e)}")
+    
+    # Configuration management methods
+    def add_configuration_dialog(self):
+        """Add new configuration dialog"""
+        self.log_message("➕ Opening add configuration dialog...")
+        self.save_configuration_dialog()
+    
+    def edit_configuration(self):
+        """Edit selected configuration"""
+        self.log_message("✏️ Edit configuration - please use the edit buttons on configuration cards")
+    
+    def delete_configuration(self):
+        """Delete selected configuration"""
+        self.log_message("🗑️ Delete configuration - please use the delete buttons on configuration cards")
+    
+    # Utility methods
     def show_error(self, message):
         """Show error dialog"""
         dialog = ctk.CTkToplevel(self.root)
@@ -923,7 +1516,8 @@ class ModernBlackzAllocatorGUI:
             dialog,
             text=f"❌ {message}",
             font=ctk.CTkFont(size=14),
-            text_color=("#dc3545", "#ff6b6b")
+            text_color=("#dc3545", "#ff6b6b"),
+            wraplength=250
         )
         error_label.pack(pady=30)
         
@@ -946,7 +1540,8 @@ class ModernBlackzAllocatorGUI:
             dialog,
             text=f"✅ {message}",
             font=ctk.CTkFont(size=14),
-            text_color=("#28a745", "#40ff40")
+            text_color=("#28a745", "#40ff40"),
+            wraplength=250
         )
         success_label.pack(pady=30)
         
@@ -957,605 +1552,13 @@ class ModernBlackzAllocatorGUI:
             corner_radius=10
         )
         ok_btn.pack(pady=10)
-    
-    def refresh_pools_button(self): 
-        """Refresh pools when button is clicked"""
-        self.refresh_pools()
-        
-    def edit_pool(self): 
-        """Show message to select a pool first"""
-        self.log_message("✏️ Please click the edit button on a specific pool card")
-    
-    def run(self):
-        """Start the modern GUI application"""
-        self.root.mainloop()
-
-# Modern Dialog Classes
-class CreatePoolDialog:
-    def __init__(self, parent, api_request_func, refresh_callback):
-        self.api_request = api_request_func
-        self.refresh_callback = refresh_callback
-        
-        self.dialog = ctk.CTkToplevel(parent)
-        self.dialog.title("✨ Create IP Pool")
-        self.dialog.geometry("500x400")
-        self.dialog.grab_set()
-        
-        # Main frame
-        main_frame = ctk.CTkFrame(self.dialog, corner_radius=15)
-        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
-        # Title
-        title_label = ctk.CTkLabel(
-            main_frame,
-            text="🏊‍♂️ Create New IP Pool",
-            font=ctk.CTkFont(size=20, weight="bold")
-        )
-        title_label.pack(pady=20)
-        
-        # Form fields
-        self.create_form_fields(main_frame)
-        
-        # Buttons
-        self.create_buttons(main_frame)
-    
-    def create_form_fields(self, parent):
-        """Create form input fields"""
-        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        form_frame.pack(fill="x", padx=30, pady=20)
-        
-        self.vars = {}
-        fields = [
-            ("Pool Name *", "name", "Enter pool name (e.g., 'Office Network')"),
-            ("CIDR *", "cidr", "Enter CIDR (e.g., '192.168.1.0/24')"),
-            ("Description", "description", "Optional description"),
-            ("Gateway IP", "gateway", "Optional gateway IP")
-        ]
-        
-        for i, (label_text, var_name, placeholder) in enumerate(fields):
-            # Label
-            label = ctk.CTkLabel(
-                form_frame,
-                text=label_text,
-                font=ctk.CTkFont(size=14, weight="bold"),
-                anchor="w"
-            )
-            label.pack(fill="x", pady=(10, 5))
-            
-            # Entry
-            self.vars[var_name] = tk.StringVar()
-            entry = ctk.CTkEntry(
-                form_frame,
-                textvariable=self.vars[var_name],
-                placeholder_text=placeholder,
-                height=35,
-                corner_radius=8,
-                font=ctk.CTkFont(size=12)
-            )
-            entry.pack(fill="x", pady=(0, 5))
-    
-    def create_buttons(self, parent):
-        """Create dialog buttons"""
-        button_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        button_frame.pack(pady=20)
-        
-        cancel_btn = ctk.CTkButton(
-            button_frame,
-            text="Cancel",
-            command=self.dialog.destroy,
-            width=120,
-            height=35,
-            corner_radius=10,
-            fg_color=("#6c757d", "#64748b")
-        )
-        cancel_btn.pack(side="left", padx=(0, 15))
-        
-        create_btn = ctk.CTkButton(
-            button_frame,
-            text="✨ Create Pool",
-            command=self.create_pool,
-            width=140,
-            height=35,
-            corner_radius=10,
-            fg_color=("#007bff", "#0066cc")
-        )
-        create_btn.pack(side="left")
-    
-    def create_pool(self):
-        """Create the pool via API"""
-        data = {
-            "name": self.vars["name"].get().strip(),
-            "cidr": self.vars["cidr"].get().strip(),
-            "description": self.vars["description"].get().strip() or None,
-            "gateway": self.vars["gateway"].get().strip() or None
-        }
-        
-        # Validation
-        if not data["name"] or not data["cidr"]:
-            self.show_error("Name and CIDR are required")
-            return
-        
-        # API call
-        result = self.api_request('POST', '/pools/', data)
-        if result:
-            self.show_success(f"Created pool: {data['name']}")
-            self.refresh_callback()
-            self.dialog.destroy()
-        else:
-            self.show_error("Failed to create pool")
-    
-    def show_error(self, message):
-        """Show error message"""
-        error_label = ctk.CTkLabel(
-            self.dialog,
-            text=f"❌ {message}",
-            text_color=("#dc3545", "#ff6b6b")
-        )
-        error_label.pack(pady=5)
-        self.dialog.after(3000, error_label.destroy)
-    
-    def show_success(self, message):
-        """Show success message"""
-        success_label = ctk.CTkLabel(
-            self.dialog,
-            text=f"✅ {message}",
-            text_color=("#28a745", "#40ff40")
-        )
-        success_label.pack(pady=5)
-
-class EditPoolDialog:
-    def __init__(self, parent, api_request_func, refresh_callback, pool_data):
-        self.api_request = api_request_func
-        self.refresh_callback = refresh_callback
-        self.pool_data = pool_data
-        
-        self.dialog = ctk.CTkToplevel(parent)
-        self.dialog.title("✏️ Edit IP Pool")
-        self.dialog.geometry("500x400")
-        self.dialog.grab_set()
-        
-        # Main frame
-        main_frame = ctk.CTkFrame(self.dialog, corner_radius=15)
-        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
-        # Title
-        title_label = ctk.CTkLabel(
-            main_frame,
-            text=f"✏️ Edit Pool: {pool_data['name']}",
-            font=ctk.CTkFont(size=20, weight="bold")
-        )
-        title_label.pack(pady=20)
-        
-        # Form fields (pre-filled)
-        self.create_form_fields(main_frame)
-        
-        # Buttons
-        self.create_buttons(main_frame)
-    
-    def create_form_fields(self, parent):
-        """Create form input fields with existing data"""
-        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        form_frame.pack(fill="x", padx=30, pady=20)
-        
-        self.vars = {}
-        fields = [
-            ("Pool Name *", "name", self.pool_data['name']),
-            ("Description", "description", self.pool_data.get('description', '')),
-            ("Gateway IP", "gateway", self.pool_data.get('gateway', ''))
-        ]
-        
-        for label_text, var_name, current_value in fields:
-            # Label
-            label = ctk.CTkLabel(
-                form_frame,
-                text=label_text,
-                font=ctk.CTkFont(size=14, weight="bold"),
-                anchor="w"
-            )
-            label.pack(fill="x", pady=(10, 5))
-            
-            # Entry
-            self.vars[var_name] = tk.StringVar(value=current_value)
-            entry = ctk.CTkEntry(
-                form_frame,
-                textvariable=self.vars[var_name],
-                height=35,
-                corner_radius=8,
-                font=ctk.CTkFont(size=12)
-            )
-            entry.pack(fill="x", pady=(0, 5))
-        
-        # CIDR (read-only)
-        cidr_label = ctk.CTkLabel(
-            form_frame,
-            text="CIDR (cannot be changed)",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            anchor="w"
-        )
-        cidr_label.pack(fill="x", pady=(10, 5))
-        
-        cidr_entry = ctk.CTkEntry(
-            form_frame,
-            height=35,
-            corner_radius=8,
-            font=ctk.CTkFont(size=12)
-        )
-        cidr_entry.insert(0, self.pool_data['cidr'])
-        cidr_entry.configure(state="disabled")
-        cidr_entry.pack(fill="x", pady=(0, 5))
-    
-    def create_buttons(self, parent):
-        """Create dialog buttons"""
-        button_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        button_frame.pack(pady=20)
-        
-        cancel_btn = ctk.CTkButton(
-            button_frame,
-            text="Cancel",
-            command=self.dialog.destroy,
-            width=120,
-            height=35,
-            corner_radius=10,
-            fg_color=("#6c757d", "#64748b")
-        )
-        cancel_btn.pack(side="left", padx=(0, 15))
-        
-        save_btn = ctk.CTkButton(
-            button_frame,
-            text="💾 Save Changes",
-            command=self.save_pool,
-            width=140,
-            height=35,
-            corner_radius=10,
-            fg_color=("#28a745", "#22c55e")
-        )
-        save_btn.pack(side="left")
-    
-    def save_pool(self):
-        """Save pool changes via API"""
-        data = {
-            "name": self.vars["name"].get().strip(),
-            "description": self.vars["description"].get().strip() or None,
-            "gateway": self.vars["gateway"].get().strip() or None
-        }
-        
-        # Validation
-        if not data["name"]:
-            self.show_error("Name is required")
-            return
-        
-        # API call
-        result = self.api_request('PUT', f'/pools/{self.pool_data["id"]}', data)
-        if result:
-            self.show_success(f"Updated pool: {data['name']}")
-            self.refresh_callback()
-            self.dialog.destroy()
-        else:
-            self.show_error("Failed to update pool")
-    
-    def show_error(self, message):
-        """Show error message"""
-        error_label = ctk.CTkLabel(
-            self.dialog,
-            text=f"❌ {message}",
-            text_color=("#dc3545", "#ff6b6b")
-        )
-        error_label.pack(pady=5)
-        self.dialog.after(3000, error_label.destroy)
-    
-    def show_success(self, message):
-        """Show success message"""
-        success_label = ctk.CTkLabel(
-            self.dialog,
-            text=f"✅ {message}",
-            text_color=("#28a745", "#40ff40")
-        )
-        success_label.pack(pady=5)
-
-class ReserveIPDialog:
-    def __init__(self, parent, api_request_func, refresh_callback):
-        self.api_request = api_request_func
-        self.refresh_callback = refresh_callback
-        
-        self.dialog = ctk.CTkToplevel(parent)
-        self.dialog.title("📌 Reserve Specific IP")
-        self.dialog.geometry("500x400")
-        self.dialog.grab_set()
-        
-        # Main frame
-        main_frame = ctk.CTkFrame(self.dialog, corner_radius=15)
-        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
-        
-        # Title
-        title_label = ctk.CTkLabel(
-            main_frame,
-            text="📌 Reserve Specific IP Address",
-            font=ctk.CTkFont(size=18, weight="bold")
-        )
-        title_label.pack(pady=20)
-        
-        # Form fields
-        self.create_form_fields(main_frame)
-        
-        # Buttons
-        self.create_buttons(main_frame)
-        
-        # Load pool data with enhanced info
-        self.load_enhanced_pools()
-    
-    def load_enhanced_pools(self):
-        """Load pools with enhanced information"""
-        pools_data = self.api_request('GET', '/pools/')
-        if pools_data:
-            pool_options = []
-            self.pool_details = {}
-            
-            for pool in pools_data:
-                if pool['is_active']:
-                    # Get utilization info
-                    util_data = self.api_request('GET', f'/pools/{pool["id"]}/utilization')
-                    if util_data:
-                        used_ips = util_data.get('allocated_ips', 0)
-                        total_ips = util_data.get('total_ips', 0)
-                        available_ips = total_ips - used_ips
-                        utilization_pct = (used_ips / total_ips * 100) if total_ips > 0 else 0
-                        
-                        # Create descriptive option text
-                        option_text = f"{pool['id']} - {pool['name']} ({pool['cidr']}) | {available_ips}/{total_ips} available"
-                        pool_options.append(option_text)
-                        self.pool_details[option_text] = {
-                            'id': pool['id'],
-                            'name': pool['name'],
-                            'cidr': pool['cidr'],
-                            'available': available_ips,
-                            'total': total_ips,
-                            'utilization': utilization_pct
-                        }
-                    else:
-                        # Fallback if utilization data unavailable
-                        option_text = f"{pool['id']} - {pool['name']} ({pool['cidr']})"
-                        pool_options.append(option_text)
-                        self.pool_details[option_text] = {
-                            'id': pool['id'],
-                            'name': pool['name'],
-                            'cidr': pool['cidr'],
-                            'available': '?',
-                            'total': '?',
-                            'utilization': 0
-                        }
-            
-            # Sort by utilization (least used first)
-            pool_options.sort(key=lambda x: self.pool_details[x]['utilization'])
-            
-            # Update combobox
-            self.pool_combo.configure(values=pool_options)
-            if pool_options:
-                # Auto-select the best pool
-                best_pool = min(pool_options, key=lambda x: self.pool_details[x]['utilization'])
-                self.pool_combo.set(best_pool)
-                
-                # Update IP placeholder based on selected pool
-                self.update_ip_placeholder()
-            else:
-                self.pool_combo.configure(values=["No active pools available"])
-                self.pool_combo.set("No active pools available")
-        
-    def create_form_fields(self, parent):
-        """Create form input fields with enhanced pool selection"""
-        form_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        form_frame.pack(fill="x", padx=30, pady=20)
-        
-        # Pool selection with enhanced info
-        pool_label = ctk.CTkLabel(
-            form_frame,
-            text="🏊 Select Pool *",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            anchor="w"
-        )
-        pool_label.pack(fill="x", pady=(5, 5))
-        
-        pool_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
-        pool_frame.pack(fill="x", pady=(0, 10))
-        
-        self.pool_var = tk.StringVar()
-        self.pool_combo = ctk.CTkComboBox(
-            pool_frame,
-            variable=self.pool_var,
-            values=[],  # Will be populated by load_enhanced_pools
-            state="readonly",
-            height=35,
-            corner_radius=8,
-            width=350,
-            font=ctk.CTkFont(size=11),
-            command=self.update_ip_placeholder  # Update placeholder when pool changes
-        )
-        self.pool_combo.pack(side="left", padx=(0, 10))
-        
-        # Refresh button for pools
-        refresh_btn = ctk.CTkButton(
-            pool_frame,
-            text="🔄",
-            command=self.load_enhanced_pools,
-            width=35,
-            height=35,
-            corner_radius=8,
-            font=ctk.CTkFont(size=14),
-            fg_color=("#17a2b8", "#20c997"),
-            hover_color=("#138496", "#1ab394")
-        )
-        refresh_btn.pack(side="left")
-        
-        # Pool info display
-        self.pool_info_label = ctk.CTkLabel(
-            form_frame,
-            text="",
-            font=ctk.CTkFont(size=11),
-            text_color=("#6c757d", "#888888"),
-            anchor="w"
-        )
-        self.pool_info_label.pack(fill="x", pady=(0, 15))
-        
-        # IP Address
-        ip_label = ctk.CTkLabel(
-            form_frame,
-            text="🌐 IP Address *",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            anchor="w"
-        )
-        ip_label.pack(fill="x", pady=(5, 5))
-        
-        self.ip_var = tk.StringVar()
-        self.ip_entry = ctk.CTkEntry(
-            form_frame,
-            textvariable=self.ip_var,
-            placeholder_text="e.g., 192.168.1.100",
-            height=35,
-            corner_radius=8,
-            font=ctk.CTkFont(size=12)
-        )
-        self.ip_entry.pack(fill="x", pady=(0, 10))
-        
-        # Client ID
-        client_label = ctk.CTkLabel(
-            form_frame,
-            text="👤 Client ID",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            anchor="w"
-        )
-        client_label.pack(fill="x", pady=(5, 5))
-        
-        self.client_var = tk.StringVar()
-        client_entry = ctk.CTkEntry(
-            form_frame,
-            textvariable=self.client_var,
-            placeholder_text="Optional client identifier",
-            height=35,
-            corner_radius=8,
-            font=ctk.CTkFont(size=12)
-        )
-        client_entry.pack(fill="x", pady=(0, 10))
-    
-    def update_ip_placeholder(self, *args):
-        """Update IP placeholder based on selected pool"""
-        selected_pool = self.pool_var.get()
-        if selected_pool and hasattr(self, 'pool_details') and selected_pool in self.pool_details:
-            pool_info = self.pool_details[selected_pool]
-            
-            # Update pool info display
-            if pool_info['available'] != '?':
-                info_text = f"💡 Pool '{pool_info['name']}' has {pool_info['available']} available IPs out of {pool_info['total']} total"
-                if pool_info['available'] == 0:
-                    info_text += " ⚠️ No IPs available!"
-            else:
-                info_text = f"💡 Pool '{pool_info['name']}' - utilization data unavailable"
-            
-            self.pool_info_label.configure(text=info_text)
-            
-            # Update IP entry placeholder with pool CIDR
-            cidr = pool_info['cidr']
-            if '/' in cidr:
-                network_base = cidr.split('/')[0]
-                # Extract network prefix for placeholder
-                parts = network_base.split('.')
-                if len(parts) >= 3:
-                    placeholder = f"e.g., {parts[0]}.{parts[1]}.{parts[2]}.100"
-                else:
-                    placeholder = f"IP within {cidr}"
-            else:
-                placeholder = f"IP within {cidr}"
-                
-            self.ip_entry.configure(placeholder_text=placeholder)
-    
-    def get_selected_pool_id(self):
-        """Get the ID of the currently selected pool"""
-        selected = self.pool_var.get()
-        if selected and " - " in selected and selected != "No active pools available":
-            return int(selected.split(' - ')[0])
-        return None
-    
-    def create_buttons(self, parent):
-        """Create dialog buttons"""
-        button_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        button_frame.pack(pady=20)
-        
-        cancel_btn = ctk.CTkButton(
-            button_frame,
-            text="Cancel",
-            command=self.dialog.destroy,
-            width=120,
-            height=35,
-            corner_radius=10,
-            fg_color=("#6c757d", "#64748b")
-        )
-        cancel_btn.pack(side="left", padx=(0, 15))
-        
-        reserve_btn = ctk.CTkButton(
-            button_frame,
-            text="📌 Reserve IP",
-            command=self.reserve_ip,
-            width=130,
-            height=35,
-            corner_radius=10,
-            fg_color=("#007bff", "#0066cc")
-        )
-        reserve_btn.pack(side="left")
-    
-    def reserve_ip(self):
-        """Reserve the specific IP via API with enhanced validation"""
-        pool_id = self.get_selected_pool_id()
-        ip_address = self.ip_var.get().strip()
-        
-        if not pool_id:
-            self.show_error("Please select a valid pool")
-            return
-            
-        if not ip_address:
-            self.show_error("Please enter an IP address")
-            return
-        
-        # Validate pool has available IPs
-        selected_pool = self.pool_var.get()
-        if hasattr(self, 'pool_details') and selected_pool in self.pool_details:
-            pool_info = self.pool_details[selected_pool]
-            if pool_info['available'] == 0:
-                self.show_error(f"Pool '{pool_info['name']}' has no available IPs")
-                return
-        
-        data = {
-            "pool_id": pool_id,
-            "ip_address": ip_address,
-            "client_id": self.client_var.get().strip() or None,
-            "lease_duration": 86400
-        }
-        
-        result = self.api_request('POST', '/reservations/', data)
-        if result and result.get('success'):
-            self.show_success(f"✅ Reserved IP: {ip_address}")
-            self.refresh_callback()
-            self.dialog.destroy()
-        else:
-            error_msg = result.get('error', 'Unknown error') if result else 'Failed to reserve IP'
-            self.show_error(f"Failed to reserve IP: {error_msg}")
-    
-    def show_error(self, message):
-        """Show error message"""
-        error_label = ctk.CTkLabel(
-            self.dialog,
-            text=f"❌ {message}",
-            text_color=("#dc3545", "#ff6b6b")
-        )
-        error_label.pack(pady=5)
-        self.dialog.after(3000, error_label.destroy)
-    
-    def show_success(self, message):
-        """Show success message"""
-        success_label = ctk.CTkLabel(
-            self.dialog,
-            text=f"✅ {message}",
-            text_color=("#28a745", "#40ff40")
-        )
-        success_label.pack(pady=5)
 
 if __name__ == "__main__":
-    app = ModernBlackzAllocatorGUI()
-    app.run() 
+    app = ModernForceBindIPGUI()
+    
+    # Initialize with data refresh
+    app.refresh_all_data()
+    app.refresh_quick_launch()
+    
+    # Run the application
+    app.root.mainloop() 
