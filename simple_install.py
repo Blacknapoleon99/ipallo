@@ -10,6 +10,82 @@ import sys
 import subprocess
 from pathlib import Path
 
+def find_executable_anywhere():
+    """Find BlackzAllocator.exe in various possible locations"""
+    current_dir = Path.cwd()
+    script_dir = Path(__file__).parent.absolute()
+    
+    # List of possible locations to search
+    search_locations = [
+        # Same directory as installer
+        script_dir / "BlackzAllocator.exe",
+        current_dir / "BlackzAllocator.exe",
+        
+        # Parent directories
+        script_dir.parent / "BlackzAllocator.exe", 
+        current_dir.parent / "BlackzAllocator.exe",
+        
+        # Up two levels
+        script_dir.parent.parent / "BlackzAllocator.exe",
+        current_dir.parent.parent / "BlackzAllocator.exe",
+        
+        # Common subdirectories
+        script_dir / "dist" / "BlackzAllocator.exe",
+        current_dir / "dist" / "BlackzAllocator.exe",
+        script_dir.parent / "dist" / "BlackzAllocator.exe",
+        current_dir.parent / "dist" / "BlackzAllocator.exe",
+        
+        # Build directories
+        script_dir / "build" / "BlackzAllocator.exe",
+        current_dir / "build" / "BlackzAllocator.exe",
+        
+        # Relative paths
+        Path("BlackzAllocator.exe"),
+        Path("../BlackzAllocator.exe"),
+        Path("../../BlackzAllocator.exe"),
+        Path("dist/BlackzAllocator.exe"),
+        Path("../dist/BlackzAllocator.exe"),
+    ]
+    
+    print(f"Searching for BlackzAllocator.exe...")
+    print(f"Current directory: {current_dir}")
+    print(f"Script directory: {script_dir}")
+    print()
+    
+    for i, location in enumerate(search_locations, 1):
+        try:
+            resolved_path = location.resolve()
+            print(f"  {i:2d}. Checking: {resolved_path}")
+            if resolved_path.exists() and resolved_path.is_file():
+                print(f"      ✅ FOUND!")
+                return resolved_path
+            else:
+                print(f"      ❌ Not found")
+        except Exception as e:
+            print(f"      ❌ Error: {e}")
+    
+    # Last resort: search the entire current directory tree
+    print(f"\nLast resort: Searching entire directory tree...")
+    for root, dirs, files in os.walk(current_dir):
+        if "BlackzAllocator.exe" in files:
+            found_path = Path(root) / "BlackzAllocator.exe"
+            print(f"  ✅ Found in directory tree: {found_path}")
+            return found_path
+    
+    # Search parent directory tree
+    print(f"Searching parent directory tree...")
+    try:
+        parent_search = current_dir.parent
+        for root, dirs, files in os.walk(parent_search):
+            if "BlackzAllocator.exe" in files:
+                found_path = Path(root) / "BlackzAllocator.exe"
+                print(f"  ✅ Found in parent tree: {found_path}")
+                return found_path
+    except:
+        pass
+    
+    return None
+
 def main():
     print("=" * 60)
     print("    BlackzAllocator Simple Installer")
@@ -17,22 +93,26 @@ def main():
     print("=" * 60)
     print()
     
-    # Find BlackzAllocator.exe in the same directory as this script
-    script_dir = Path(__file__).parent.absolute()
-    exe_path = script_dir / "BlackzAllocator.exe"
+    # Find BlackzAllocator.exe anywhere
+    exe_path = find_executable_anywhere()
     
-    print(f"Looking for BlackzAllocator.exe at: {exe_path}")
-    
-    if not exe_path.exists():
-        print("❌ BlackzAllocator.exe not found in the same directory as this installer!")
-        print(f"   Script directory: {script_dir}")
-        print("   Directory contents:")
-        for item in script_dir.iterdir():
-            print(f"     - {item.name}")
+    if not exe_path:
+        print("\n❌ BlackzAllocator.exe not found anywhere!")
+        print("\nPlease make sure:")
+        print("1. You've extracted the complete ZIP file")
+        print("2. BlackzAllocator.exe is in the extracted folder")
+        print("3. You're running this installer from the extracted folder")
+        print("\nDirectory contents:")
+        try:
+            current_files = list(Path.cwd().iterdir())
+            for item in current_files:
+                print(f"   - {item.name}")
+        except:
+            print("   (Unable to list directory contents)")
         input("\nPress Enter to exit...")
         return
     
-    print("✅ Found BlackzAllocator.exe")
+    print(f"\n✅ Found BlackzAllocator.exe at: {exe_path}")
     
     # Default installation directory
     if os.name == 'nt':  # Windows
@@ -83,7 +163,7 @@ def main():
         # Create README
         readme_path = install_path / "README.txt"
         with open(readme_path, 'w') as f:
-            f.write("""BlackzAllocator - Professional IP Pool Management
+            f.write(f"""BlackzAllocator - Professional IP Pool Management
 =====================================================
 
 Installation Complete!
