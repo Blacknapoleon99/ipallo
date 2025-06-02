@@ -18,6 +18,10 @@ def main():
     print("=" * 60)
     print()
     
+    # Get the directory where this installer script is located
+    installer_dir = Path(__file__).parent.absolute()
+    package_dir = installer_dir.parent  # Go up one level to the package directory
+    
     # Default installation directory
     if os.name == 'nt':  # Windows
         default_install_path = Path.home() / "AppData" / "Local" / "BlackzAllocator"
@@ -41,14 +45,21 @@ def main():
         # Create installation directory
         install_path.mkdir(parents=True, exist_ok=True)
         
-        # Copy executable
-        exe_source = Path("dist/BlackzAllocator.exe")
+        # Look for executable in the package directory
+        exe_source = package_dir / "BlackzAllocator.exe"
+        if not exe_source.exists():
+            # Also try in the current directory
+            exe_source = Path("BlackzAllocator.exe")
+        
         if exe_source.exists():
             exe_dest = install_path / "BlackzAllocator.exe"
             shutil.copy2(exe_source, exe_dest)
             print("✅ Copied BlackzAllocator.exe")
         else:
-            print("❌ BlackzAllocator.exe not found. Please build first!")
+            print("❌ BlackzAllocator.exe not found!")
+            print(f"   Looked in: {package_dir}")
+            print(f"   Also tried: {Path('.').absolute()}")
+            input("Press Enter to exit...")
             return
         
         # Create desktop shortcut (Windows)
@@ -70,6 +81,8 @@ def main():
                 print("✅ Created desktop shortcut")
             except ImportError:
                 print("⚠️  Desktop shortcut creation skipped (winshell not available)")
+            except Exception as e:
+                print(f"⚠️  Desktop shortcut creation failed: {e}")
         
         # Create start menu entry (Windows)
         if os.name == 'nt':
@@ -215,6 +228,10 @@ Enjoy using BlackzAllocator!
         
     except Exception as e:
         print(f"❌ Installation failed: {e}")
+        print(f"Current directory: {Path('.').absolute()}")
+        print(f"Installer directory: {installer_dir}")
+        print(f"Package directory: {package_dir}")
+        input("Press Enter to exit...")
         return
     
     print("\n🎯 Thank you for choosing BlackzAllocator!")

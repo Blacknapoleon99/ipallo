@@ -25,6 +25,9 @@ if %errorlevel% neq 0 (
 echo [OK] Python found
 echo.
 
+REM Change to the directory where this batch file is located
+cd /d "%~dp0"
+
 REM Run the installer
 echo [INFO] Running installer...
 python installer\install_blackz.py
