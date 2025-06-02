@@ -1,0 +1,41 @@
+# Build artifacts
+build/
+dist/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Distribution packages
+*.zip
+package/
+
+# Database files (optional - you might want to include the sample DB)
+# *.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Virtual environments
+venv/
+env/
+.env
+
+# Temporary files
+*.tmp
+*.temp 
