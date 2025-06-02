@@ -247,7 +247,7 @@ class ModernBlackzAllocatorGUI:
         self.pool_details_text.pack(fill="x", padx=20, pady=(0, 20))
     
     def create_modern_allocations_tab(self):
-        """Create modern IP Allocations tab"""
+        """Create modern IP Allocations tab with enhanced pool selection"""
         self.tabview.add("💻 Allocations")
         alloc_tab = self.tabview.tab("💻 Allocations")
         
@@ -268,49 +268,84 @@ class ModernBlackzAllocatorGUI:
         controls_container = ctk.CTkFrame(control_frame, fg_color=("#ffffff", "#2d2d2d"))
         controls_container.pack(fill="x", padx=20, pady=(0, 20))
         
-        # First row - Dropdowns
+        # First row - Enhanced pool selection
         row1 = ctk.CTkFrame(controls_container, fg_color=("#ffffff", "#2d2d2d"))
         row1.pack(fill="x", pady=(0, 15))
         
-        # Pool selection
-        pool_label = ctk.CTkLabel(row1, text="Pool:", font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold"))
+        # Enhanced pool selection with info
+        pool_info_frame = ctk.CTkFrame(row1, fg_color=("#ffffff", "#2d2d2d"))
+        pool_info_frame.pack(fill="x", pady=(0, 10))
+        
+        pool_label = ctk.CTkLabel(
+            pool_info_frame, 
+            text="🏊 Pool Selection:", 
+            font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold")
+        )
         pool_label.pack(side="left", padx=(0, 10))
         
         self.pool_var = tk.StringVar()
         self.pool_combo = ctk.CTkComboBox(
-            row1,
+            pool_info_frame,
             variable=self.pool_var,
-            width=250,
+            width=400,  # Wider to show more info
             corner_radius=8,
             border_width=1,
-            font=ctk.CTkFont(family="SF Pro Display", size=12)
+            font=ctk.CTkFont(family="SF Pro Display", size=11),
+            state="readonly"  # Prevent manual typing
         )
-        self.pool_combo.pack(side="left", padx=(0, 30))
+        self.pool_combo.pack(side="left", padx=(0, 20))
+        
+        # Refresh pools button
+        refresh_pools_btn = ctk.CTkButton(
+            pool_info_frame,
+            text="🔄",
+            command=self.update_pool_combo,
+            width=35,
+            height=32,
+            corner_radius=8,
+            font=ctk.CTkFont(size=16),
+            fg_color=("#17a2b8", "#20c997"),
+            hover_color=("#138496", "#1ab394")
+        )
+        refresh_pools_btn.pack(side="left", padx=(0, 20))
         
         # Strategy selection
-        strategy_label = ctk.CTkLabel(row1, text="Strategy:", font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold"))
+        strategy_info_frame = ctk.CTkFrame(row1, fg_color=("#ffffff", "#2d2d2d"))
+        strategy_info_frame.pack(fill="x")
+        
+        strategy_label = ctk.CTkLabel(
+            strategy_info_frame, 
+            text="🎯 Strategy:", 
+            font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold")
+        )
         strategy_label.pack(side="left", padx=(0, 10))
         
         self.strategy_var = tk.StringVar(value="first_fit")
         strategy_combo = ctk.CTkComboBox(
-            row1,
+            strategy_info_frame,
             variable=self.strategy_var,
             values=["first_fit", "random", "sequential", "load_balanced"],
             width=200,
             corner_radius=8,
             border_width=1,
-            font=ctk.CTkFont(family="SF Pro Display", size=12)
+            font=ctk.CTkFont(family="SF Pro Display", size=12),
+            state="readonly"
         )
         strategy_combo.pack(side="left", padx=(0, 30))
         
         # Client ID entry
-        client_label = ctk.CTkLabel(row1, text="Client ID:", font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold"))
+        client_label = ctk.CTkLabel(
+            strategy_info_frame, 
+            text="👤 Client ID:", 
+            font=ctk.CTkFont(family="SF Pro Display", size=13, weight="bold")
+        )
         client_label.pack(side="left", padx=(0, 10))
         
         self.client_id_var = tk.StringVar()
         client_entry = ctk.CTkEntry(
-            row1,
+            strategy_info_frame,
             textvariable=self.client_id_var,
+            placeholder_text="Optional identifier",
             width=200,
             corner_radius=8,
             border_width=1,
@@ -468,14 +503,22 @@ class ModernBlackzAllocatorGUI:
         self.logs_text.insert("end", log_entry)
     
     def refresh_all_data(self):
-        """Refresh all data"""
+        """Refresh all data including enhanced pool information"""
         self.log_message("🔄 Refreshing all data...")
+        
+        # Refresh pools first (this populates the combos)
         self.refresh_pools()
+        
+        # Update pool combo with enhanced information
+        self.update_pool_combo()
+        
+        # Refresh other data
         self.refresh_allocations()
         self.refresh_leases()
         self.refresh_interfaces()
         self.refresh_stats()
-        self.update_pool_combo()
+        
+        self.log_message("✅ All data refreshed successfully")
     
     def refresh_pools(self):
         """Refresh pools data and display in GUI"""
@@ -616,14 +659,117 @@ class ModernBlackzAllocatorGUI:
         delete_btn.pack(side="left")
     
     def update_pool_combo(self):
-        """Update pool combobox values"""
+        """Update pool combobox values with enhanced information"""
         pools_data = self.api_request('GET', '/pools/')
         if pools_data:
-            pool_names = [f"{pool['id']} - {pool['name']}" for pool in pools_data if pool['is_active']]
-            self.pool_combo.configure(values=pool_names)
-            if pool_names:
-                self.pool_combo.set(pool_names[0])
-    
+            # Get utilization data for each pool
+            pool_options = []
+            pool_details = {}
+            
+            for pool in pools_data:
+                if pool['is_active']:
+                    # Get utilization info
+                    util_data = self.api_request('GET', f'/pools/{pool["id"]}/utilization')
+                    if util_data:
+                        used_ips = util_data.get('allocated_ips', 0)
+                        total_ips = util_data.get('total_ips', 0)
+                        available_ips = total_ips - used_ips
+                        utilization_pct = (used_ips / total_ips * 100) if total_ips > 0 else 0
+                        
+                        # Create descriptive option text
+                        option_text = f"{pool['id']} - {pool['name']} ({pool['cidr']}) | {available_ips}/{total_ips} available ({utilization_pct:.0f}% used)"
+                        pool_options.append(option_text)
+                        pool_details[option_text] = {
+                            'id': pool['id'],
+                            'name': pool['name'],
+                            'cidr': pool['cidr'],
+                            'available': available_ips,
+                            'total': total_ips,
+                            'utilization': utilization_pct
+                        }
+                    else:
+                        # Fallback if utilization data unavailable
+                        option_text = f"{pool['id']} - {pool['name']} ({pool['cidr']})"
+                        pool_options.append(option_text)
+                        pool_details[option_text] = {
+                            'id': pool['id'],
+                            'name': pool['name'],
+                            'cidr': pool['cidr'],
+                            'available': '?',
+                            'total': '?',
+                            'utilization': 0
+                        }
+            
+            # Sort by utilization (least used first) to recommend best pools
+            pool_options.sort(key=lambda x: pool_details[x]['utilization'])
+            
+            # Update combobox
+            if hasattr(self, 'pool_combo') and self.pool_combo:
+                self.pool_combo.configure(values=pool_options)
+                if pool_options:
+                    # Auto-select the pool with most available space
+                    best_pool = min(pool_options, key=lambda x: pool_details[x]['utilization'])
+                    self.pool_combo.set(best_pool)
+                    self.log_message(f"📋 Auto-selected optimal pool: {pool_details[best_pool]['name']} ({pool_details[best_pool]['available']} IPs available)")
+                else:
+                    self.pool_combo.set("No active pools available")
+                    self.log_message("⚠️ No active pools found")
+            
+            # Store pool details for other components
+            self.pool_details = pool_details
+            return pool_options
+        else:
+            if hasattr(self, 'pool_combo') and self.pool_combo:
+                self.pool_combo.configure(values=["No pools available"])
+                self.pool_combo.set("No pools available")
+            self.log_message("❌ Failed to load pools")
+            return []
+
+    def get_selected_pool_id(self):
+        """Get the ID of the currently selected pool"""
+        if hasattr(self, 'pool_var') and self.pool_var.get():
+            selected = self.pool_var.get()
+            if selected and " - " in selected and selected != "No pools available" and selected != "No active pools available":
+                return int(selected.split(' - ')[0])
+        return None
+
+    def allocate_next_ip(self): 
+        """Enhanced IP allocation with better pool validation"""
+        self.log_message("🎯 Allocating next IP...")
+        
+        pool_id = self.get_selected_pool_id()
+        if not pool_id:
+            self.show_error("Please select a valid pool first")
+            return
+        
+        # Get pool details for validation
+        if hasattr(self, 'pool_details') and self.pool_var.get() in self.pool_details:
+            pool_info = self.pool_details[self.pool_var.get()]
+            if pool_info['available'] == 0:
+                self.show_error(f"Pool '{pool_info['name']}' has no available IPs")
+                return
+        
+        data = {
+            "pool_id": pool_id,
+            "client_id": self.client_id_var.get() or None,
+            "allocation_strategy": self.strategy_var.get(),
+            "lease_duration": 86400
+        }
+        
+        result = self.api_request('POST', '/allocations/', data)
+        if result and result.get('success'):
+            ip_address = result.get('ip_address')
+            self.log_message(f"✅ Allocated IP: {ip_address}")
+            
+            # Refresh pool combo to update availability
+            self.update_pool_combo()
+            self.refresh_allocations()
+            self.show_success(f"✅ Allocated IP: {ip_address}")
+        else:
+            error_msg = result.get('error', 'Unknown error') if result else 'Failed to allocate IP'
+            self.log_message(f"❌ Failed to allocate IP: {error_msg}")
+            self.show_error(f"Failed to allocate IP: {error_msg}")
+
     # Implemented button actions
     def create_pool_dialog(self): 
         self.log_message("✨ Opening Create Pool dialog...")
@@ -695,32 +841,6 @@ class ModernBlackzAllocatorGUI:
             fg_color=("#dc3545", "#ef4444")
         )
         delete_btn.pack(side="left")
-        
-    def allocate_next_ip(self): 
-        self.log_message("🎯 Allocating next IP...")
-        
-        if not self.pool_var.get():
-            self.show_error("Please select a pool")
-            return
-        
-        pool_id = int(self.pool_var.get().split(' - ')[0])
-        
-        data = {
-            "pool_id": pool_id,
-            "client_id": self.client_id_var.get() or None,
-            "allocation_strategy": self.strategy_var.get(),
-            "lease_duration": 86400
-        }
-        
-        result = self.api_request('POST', '/allocations/', data)
-        if result and result.get('success'):
-            ip_address = result.get('ip_address')
-            self.log_message(f"✅ Allocated IP: {ip_address}")
-            self.refresh_allocations()
-            self.show_success(f"Allocated IP: {ip_address}")
-        else:
-            self.log_message("❌ Failed to allocate IP")
-            self.show_error("Failed to allocate IP")
         
     def reserve_specific_ip_dialog(self): 
         self.log_message("📌 Opening Reserve Specific IP dialog...")
@@ -1139,7 +1259,7 @@ class ReserveIPDialog:
         
         self.dialog = ctk.CTkToplevel(parent)
         self.dialog.title("📌 Reserve Specific IP")
-        self.dialog.geometry("400x300")
+        self.dialog.geometry("500x400")
         self.dialog.grab_set()
         
         # Main frame
@@ -1159,61 +1279,146 @@ class ReserveIPDialog:
         
         # Buttons
         self.create_buttons(main_frame)
+        
+        # Load pool data with enhanced info
+        self.load_enhanced_pools()
     
+    def load_enhanced_pools(self):
+        """Load pools with enhanced information"""
+        pools_data = self.api_request('GET', '/pools/')
+        if pools_data:
+            pool_options = []
+            self.pool_details = {}
+            
+            for pool in pools_data:
+                if pool['is_active']:
+                    # Get utilization info
+                    util_data = self.api_request('GET', f'/pools/{pool["id"]}/utilization')
+                    if util_data:
+                        used_ips = util_data.get('allocated_ips', 0)
+                        total_ips = util_data.get('total_ips', 0)
+                        available_ips = total_ips - used_ips
+                        utilization_pct = (used_ips / total_ips * 100) if total_ips > 0 else 0
+                        
+                        # Create descriptive option text
+                        option_text = f"{pool['id']} - {pool['name']} ({pool['cidr']}) | {available_ips}/{total_ips} available"
+                        pool_options.append(option_text)
+                        self.pool_details[option_text] = {
+                            'id': pool['id'],
+                            'name': pool['name'],
+                            'cidr': pool['cidr'],
+                            'available': available_ips,
+                            'total': total_ips,
+                            'utilization': utilization_pct
+                        }
+                    else:
+                        # Fallback if utilization data unavailable
+                        option_text = f"{pool['id']} - {pool['name']} ({pool['cidr']})"
+                        pool_options.append(option_text)
+                        self.pool_details[option_text] = {
+                            'id': pool['id'],
+                            'name': pool['name'],
+                            'cidr': pool['cidr'],
+                            'available': '?',
+                            'total': '?',
+                            'utilization': 0
+                        }
+            
+            # Sort by utilization (least used first)
+            pool_options.sort(key=lambda x: self.pool_details[x]['utilization'])
+            
+            # Update combobox
+            self.pool_combo.configure(values=pool_options)
+            if pool_options:
+                # Auto-select the best pool
+                best_pool = min(pool_options, key=lambda x: self.pool_details[x]['utilization'])
+                self.pool_combo.set(best_pool)
+                
+                # Update IP placeholder based on selected pool
+                self.update_ip_placeholder()
+            else:
+                self.pool_combo.configure(values=["No active pools available"])
+                self.pool_combo.set("No active pools available")
+        
     def create_form_fields(self, parent):
-        """Create form input fields"""
+        """Create form input fields with enhanced pool selection"""
         form_frame = ctk.CTkFrame(parent, fg_color="transparent")
         form_frame.pack(fill="x", padx=30, pady=20)
         
-        # Get pools for selection
-        pools_data = self.api_request('GET', '/pools/')
-        pool_options = [f"{pool['id']} - {pool['name']}" for pool in pools_data if pool['is_active']] if pools_data else []
-        
-        # Pool selection
+        # Pool selection with enhanced info
         pool_label = ctk.CTkLabel(
             form_frame,
-            text="Select Pool *",
+            text="🏊 Select Pool *",
             font=ctk.CTkFont(size=14, weight="bold"),
             anchor="w"
         )
         pool_label.pack(fill="x", pady=(5, 5))
         
+        pool_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        pool_frame.pack(fill="x", pady=(0, 10))
+        
         self.pool_var = tk.StringVar()
-        pool_combo = ctk.CTkComboBox(
-            form_frame,
+        self.pool_combo = ctk.CTkComboBox(
+            pool_frame,
             variable=self.pool_var,
-            values=pool_options,
+            values=[],  # Will be populated by load_enhanced_pools
             state="readonly",
             height=35,
-            corner_radius=8
+            corner_radius=8,
+            width=350,
+            font=ctk.CTkFont(size=11),
+            command=self.update_ip_placeholder  # Update placeholder when pool changes
         )
-        pool_combo.pack(fill="x", pady=(0, 10))
-        if pool_options:
-            pool_combo.set(pool_options[0])
+        self.pool_combo.pack(side="left", padx=(0, 10))
+        
+        # Refresh button for pools
+        refresh_btn = ctk.CTkButton(
+            pool_frame,
+            text="🔄",
+            command=self.load_enhanced_pools,
+            width=35,
+            height=35,
+            corner_radius=8,
+            font=ctk.CTkFont(size=14),
+            fg_color=("#17a2b8", "#20c997"),
+            hover_color=("#138496", "#1ab394")
+        )
+        refresh_btn.pack(side="left")
+        
+        # Pool info display
+        self.pool_info_label = ctk.CTkLabel(
+            form_frame,
+            text="",
+            font=ctk.CTkFont(size=11),
+            text_color=("#6c757d", "#888888"),
+            anchor="w"
+        )
+        self.pool_info_label.pack(fill="x", pady=(0, 15))
         
         # IP Address
         ip_label = ctk.CTkLabel(
             form_frame,
-            text="IP Address *",
+            text="🌐 IP Address *",
             font=ctk.CTkFont(size=14, weight="bold"),
             anchor="w"
         )
         ip_label.pack(fill="x", pady=(5, 5))
         
         self.ip_var = tk.StringVar()
-        ip_entry = ctk.CTkEntry(
+        self.ip_entry = ctk.CTkEntry(
             form_frame,
             textvariable=self.ip_var,
             placeholder_text="e.g., 192.168.1.100",
             height=35,
-            corner_radius=8
+            corner_radius=8,
+            font=ctk.CTkFont(size=12)
         )
-        ip_entry.pack(fill="x", pady=(0, 10))
+        self.ip_entry.pack(fill="x", pady=(0, 10))
         
         # Client ID
         client_label = ctk.CTkLabel(
             form_frame,
-            text="Client ID",
+            text="👤 Client ID",
             font=ctk.CTkFont(size=14, weight="bold"),
             anchor="w"
         )
@@ -1225,9 +1430,48 @@ class ReserveIPDialog:
             textvariable=self.client_var,
             placeholder_text="Optional client identifier",
             height=35,
-            corner_radius=8
+            corner_radius=8,
+            font=ctk.CTkFont(size=12)
         )
         client_entry.pack(fill="x", pady=(0, 10))
+    
+    def update_ip_placeholder(self, *args):
+        """Update IP placeholder based on selected pool"""
+        selected_pool = self.pool_var.get()
+        if selected_pool and hasattr(self, 'pool_details') and selected_pool in self.pool_details:
+            pool_info = self.pool_details[selected_pool]
+            
+            # Update pool info display
+            if pool_info['available'] != '?':
+                info_text = f"💡 Pool '{pool_info['name']}' has {pool_info['available']} available IPs out of {pool_info['total']} total"
+                if pool_info['available'] == 0:
+                    info_text += " ⚠️ No IPs available!"
+            else:
+                info_text = f"💡 Pool '{pool_info['name']}' - utilization data unavailable"
+            
+            self.pool_info_label.configure(text=info_text)
+            
+            # Update IP entry placeholder with pool CIDR
+            cidr = pool_info['cidr']
+            if '/' in cidr:
+                network_base = cidr.split('/')[0]
+                # Extract network prefix for placeholder
+                parts = network_base.split('.')
+                if len(parts) >= 3:
+                    placeholder = f"e.g., {parts[0]}.{parts[1]}.{parts[2]}.100"
+                else:
+                    placeholder = f"IP within {cidr}"
+            else:
+                placeholder = f"IP within {cidr}"
+                
+            self.ip_entry.configure(placeholder_text=placeholder)
+    
+    def get_selected_pool_id(self):
+        """Get the ID of the currently selected pool"""
+        selected = self.pool_var.get()
+        if selected and " - " in selected and selected != "No active pools available":
+            return int(selected.split(' - ')[0])
+        return None
     
     def create_buttons(self, parent):
         """Create dialog buttons"""
@@ -1257,27 +1501,41 @@ class ReserveIPDialog:
         reserve_btn.pack(side="left")
     
     def reserve_ip(self):
-        """Reserve the specific IP via API"""
-        if not self.pool_var.get() or not self.ip_var.get():
-            self.show_error("Pool and IP address are required")
+        """Reserve the specific IP via API with enhanced validation"""
+        pool_id = self.get_selected_pool_id()
+        ip_address = self.ip_var.get().strip()
+        
+        if not pool_id:
+            self.show_error("Please select a valid pool")
+            return
+            
+        if not ip_address:
+            self.show_error("Please enter an IP address")
             return
         
-        pool_id = int(self.pool_var.get().split(' - ')[0])
+        # Validate pool has available IPs
+        selected_pool = self.pool_var.get()
+        if hasattr(self, 'pool_details') and selected_pool in self.pool_details:
+            pool_info = self.pool_details[selected_pool]
+            if pool_info['available'] == 0:
+                self.show_error(f"Pool '{pool_info['name']}' has no available IPs")
+                return
         
         data = {
             "pool_id": pool_id,
-            "ip_address": self.ip_var.get().strip(),
+            "ip_address": ip_address,
             "client_id": self.client_var.get().strip() or None,
             "lease_duration": 86400
         }
         
         result = self.api_request('POST', '/reservations/', data)
         if result and result.get('success'):
-            self.show_success(f"Reserved IP: {data['ip_address']}")
+            self.show_success(f"✅ Reserved IP: {ip_address}")
             self.refresh_callback()
             self.dialog.destroy()
         else:
-            self.show_error("Failed to reserve IP")
+            error_msg = result.get('error', 'Unknown error') if result else 'Failed to reserve IP'
+            self.show_error(f"Failed to reserve IP: {error_msg}")
     
     def show_error(self, message):
         """Show error message"""
